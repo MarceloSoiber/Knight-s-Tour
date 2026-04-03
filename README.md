@@ -4,17 +4,26 @@ JavaScript application that explores the Knight's Tour problem using a genetic a
 
 The project includes a visual interface to follow the evolution, tune the search parameters, inspect the board in real time, and control the animation of the discovered solution.
 
+## Overview
+
+The project is split into two layers:
+
+- `GenerationController`: thin orchestration layer responsible for coordinating the execution flow.
+- `GenerationService`: contains the genetic algorithm implementation and all population operations.
+
+This separation makes the code easier to maintain and keeps the controller focused on delegating work rather than containing algorithm details.
+
 ## How It Works
 
 The algorithm works with a population of chromosomes, where each chromosome represents a sequence of board positions. Each sequence is evaluated based on the number of valid knight moves.
 
 At each generation, the system:
 
-1. Initializes or keeps the current population.
+1. Initializes the population with randomized chromosomes.
 2. Sorts individuals by fitness.
 3. Applies crossover between parents to generate new chromosomes.
 4. Performs mutations to explore new combinations.
-5. Removes individuals outside the life-span rules, when that option is enabled.
+5. Applies life-span rules when that option is enabled.
 6. Updates the interface statistics and continues until the generation limit is reached or a full path is found.
 
 The search behavior changes depending on the selected processing mode:
@@ -64,7 +73,8 @@ npm run start
 - `index.html`: main application interface.
 - `style.css`: board, control panel, and statistics styles.
 - `src/index.js`: orchestrates the interface, animation, and algorithm interaction.
-- `src/controller/GenerationController.js`: implements the genetic algorithm logic.
+- `src/controller/GenerationController.js`: thin controller that delegates the execution to the service.
+- `src/service/GenerationService.js`: contains the full genetic algorithm implementation.
 - `src/model/Cromossomo.js`: represents each individual in the population.
 
 ## Notes
