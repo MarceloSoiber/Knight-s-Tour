@@ -1,75 +1,75 @@
 # Knight's Tour
 
-Aplicação em JavaScript para explorar o problema do Knight's Tour com algoritmo genético. O objetivo é encontrar um percurso em que o cavalo visite o maior número possível de casas do tabuleiro, respeitando o movimento em “L” do xadrez.
+JavaScript application that explores the Knight's Tour problem using a genetic algorithm. The goal is to find a path where the knight visits as many board squares as possible while respecting the chess knight's L-shaped movement.
 
-O projeto inclui uma interface visual para acompanhar a evolução, ajustar parâmetros da busca, observar o tabuleiro em tempo real e controlar a animação da solução encontrada.
+The project includes a visual interface to follow the evolution, tune the search parameters, inspect the board in real time, and control the animation of the discovered solution.
 
-## Como funciona
+## How It Works
 
-O algoritmo trabalha com uma população de cromossomos, onde cada cromossomo representa uma sequência de posições do tabuleiro. Cada sequência é avaliada com base na quantidade de movimentos válidos do cavalo.
+The algorithm works with a population of chromosomes, where each chromosome represents a sequence of board positions. Each sequence is evaluated based on the number of valid knight moves.
 
-Em cada geração o sistema:
+At each generation, the system:
 
-1. Inicializa ou mantém a população atual.
-2. Ordena os indivíduos pelo fitness.
-3. Aplica cruzamento entre pais para gerar novos cromossomos.
-4. Executa mutações para explorar novas combinações.
-5. Remove indivíduos fora das regras de vida útil, quando essa opção está ativa.
-6. Atualiza as estatísticas na interface e segue até atingir o limite de gerações ou encontrar um percurso completo.
+1. Initializes or keeps the current population.
+2. Sorts individuals by fitness.
+3. Applies crossover between parents to generate new chromosomes.
+4. Performs mutations to explore new combinations.
+5. Removes individuals outside the life-span rules, when that option is enabled.
+6. Updates the interface statistics and continues until the generation limit is reached or a full path is found.
 
-O comportamento da busca varia conforme a opção escolhida:
+The search behavior changes depending on the selected processing mode:
 
-- Elitista: prioriza os melhores indivíduos já classificados.
-- Roleta: faz uma seleção mais aleatória, favorecendo diversidade na população.
+- Elitist: prioritizes the best-ranked individuals.
+- Roulette: performs a more random selection, which increases population diversity.
 
 ## Interface
 
-A tela principal foi organizada para facilitar o acompanhamento da busca:
+The main screen is organized to make the search easy to follow:
 
-- Configurações: define gerações, quantidade de cromossomos, taxas de seleção, cruzamento e mutação.
-- Percurso do cavalo: mostra o tabuleiro, o cavalo animado e os controles de reprodução.
-- Resultados e estatísticas: exibe geração atual, fitness, média e casas visitadas.
-- Caminho da solução: lista o percurso encontrado durante a animação.
+- Settings: defines generations, chromosome count, selection, crossover, and mutation rates.
+- Knight's path: shows the board, the animated knight, and playback controls.
+- Results and statistics: shows current generation, fitness, average fitness, and visited squares.
+- Solution path: lists the discovered route during the animation.
 
-Os controles do percurso permitem ajustar a velocidade, pausar, avançar e retroceder a animação.
+The playback controls allow you to adjust speed, pause, advance, and rewind the animation.
 
-## Parâmetros principais
+## Main Parameters
 
-- Gerações: quantidade máxima de iterações da evolução.
-- Cromossomos: tamanho da população inicial.
-- Seleção: porcentagem da população mantida após a ordenação.
-- Cruzamento: fração de indivíduos usados para gerar filhos.
-- Mutação: porcentagem de indivíduos que sofrem alterações.
-- Séries mutação: quantidade de trocas feitas por indivíduo mutado.
-- Expectativa de vida: tempo de permanência dos indivíduos, quando a regra está ativa.
+- Generations: maximum number of evolution iterations.
+- Chromosomes: size of the initial population.
+- Selection: percentage of the population kept after sorting.
+- Crossover: fraction of individuals used to generate offspring.
+- Mutation: percentage of individuals that undergo changes.
+- Mutation series: number of swaps applied to each mutated individual.
+- Life expectancy: how long individuals remain alive, when the rule is enabled.
 
-## Como executar
+## How to Run
 
-1. Instale as dependências:
+1. Install the dependencies:
 
 ```bash
 npm install
 ```
 
-2. Inicie o servidor local:
+2. Start the local server:
 
 ```bash
 npm run start
 ```
 
-3. Abra o endereço informado pelo servidor no navegador.
+3. Open the address provided by the server in your browser.
 
-## Estrutura do projeto
+## Project Structure
 
-- `index.html`: interface principal da aplicação.
-- `style.css`: estilos do tabuleiro, painel de controle e estatísticas.
-- `src/index.js`: orquestra a interface, animação e interação com o algoritmo.
-- `src/controller/GenerationController.js`: implementa a lógica do algoritmo genético.
-- `src/model/Cromossomo.js`: representa cada indivíduo da população.
+- `index.html`: main application interface.
+- `style.css`: board, control panel, and statistics styles.
+- `src/index.js`: orchestrates the interface, animation, and algorithm interaction.
+- `src/controller/GenerationController.js`: implements the genetic algorithm logic.
+- `src/model/Cromossomo.js`: represents each individual in the population.
 
-## Observações
+## Notes
 
-- A opção de roleta usada no projeto é uma seleção aleatória simples entre os indivíduos disponíveis.
-- O melhor caminho encontrado pode não ser uma solução completa de 64 casas, mas a interface mostra claramente até onde a busca conseguiu avançar.
-- A solução visualizada é atualizada em tempo real durante a animação.
+- The roulette option used in the project is a simple random selection among available individuals.
+- The best path found may not always be a complete 64-square solution, but the interface clearly shows how far the search progressed.
+- The displayed solution path updates in real time during the animation.
    
