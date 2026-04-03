@@ -1,0 +1,21 @@
+{
+    "name": "knight-tour",
+    "version": "1.0.0",
+    "description": "A Knight's Tour solver with genetic algorithm",
+    "main": "index.js",
+    "type": "module",
+    "scripts": {
+        "start": "browser-sync -w . --server --files 'index.html, data/*.json, js/*.js' --port 3000",
+        "dev": "browser-sync -w . --inspect --server --files 'index.html, data/*.json, js/*.js' --port 3000",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": [
+        "javascript",
+        "genetic algorithm"
+    ],
+    "author": "",
+    "license": "ISC",
+    "devDependencies": {
+        "browser-sync": "^3.0.4"
+    }
+}

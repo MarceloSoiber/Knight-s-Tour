@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Knight's Tour - Algoritmo Genético</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="./style.css">
+</head>
+
+<body>
+    <div class="container-fluid app-shell mt-5 mb-5">
+        <h1 class="text-center text-white app-title mb-5">
+            <i class="bi bi-horse"></i> Knight's Tour - Algoritmo Genético
+        </h1>
+
+        <div class="app-main-row">
+            <div class="row g-3 app-main-split">
+                <div class="col-lg-5 left-stack">
+                    <div class="card shadow-lg config-card top-card compact-config">
+                        <div class="card-header bg-primary text-white">
+                            <h4 class="mb-0">
+                                <i class="bi bi-gear"></i> Configurações
+                            </h4>
+                        </div>
+                        <div class="card-body">
+                            <form id="configForm">
+                                <div class="config-grid mb-2">
+                                    <div class="config-field">
+                                        <label for="generations" class="form-label">Gerações</label>
+                                        <input type="number" class="form-control" id="generations" value="2000" min="1" required>
+                                    </div>
+                                    <div class="config-field">
+                                        <label for="chromosomes" class="form-label">Cromossomos</label>
+                                        <input type="number" class="form-control" id="chromosomes" value="15000" min="1" required>
+                                    </div>
+                                    <div class="config-field">
+                                        <label for="selectionRate" class="form-label">Seleção (%)</label>
+                                        <input type="number" class="form-control" id="selectionRate" value="50" min="0" max="100" required>
+                                    </div>
+                                    <div class="config-field">
+                                        <label for="crossoverRate" class="form-label">Cruzamento (%)</label>
+                                        <input type="number" class="form-control" id="crossoverRate" value="100" min="0" max="100" required>
+                                    </div>
+                                    <div class="config-field">
+                                        <label for="mutationRate" class="form-label">Mutação (%)</label>
+                                        <input type="number" class="form-control" id="mutationRate" value="5" min="0" max="100" required>
+                                    </div>
+                                    <div class="config-field">
+                                        <label for="seriesPerMutation" class="form-label">Séries Mutação</label>
+                                        <input type="number" class="form-control" id="seriesPerMutation" value="5" min="1" required>
+                                    </div>
+                                    <div class="config-field config-field-full">
+                                        <label for="lifeExpectancy" class="form-label">Expectativa de vida</label>
+                                        <input type="number" class="form-control" id="lifeExpectancy" value="15" min="1" required>
+                                    </div>
+                                </div>
+
+                                <div class="config-options-row life-row mb-2">
+                                    <div class="form-check mb-0 compact-check">
+                                        <input class="form-check-input" type="checkbox" id="activateLifeExpectancy">
+                                        <label class="form-check-label" for="activateLifeExpectancy">
+                                            Ativar expectativa de vida
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="config-options-row processing-row mb-3">
+                                    <h6 class="text-muted options-title">Processamento</h6>
+                                    <div class="options-inline">
+                                        <div class="form-check mb-0 compact-check">
+                                            <input class="form-check-input" type="radio" name="processingOption" id="elitist" value="elitist">
+                                            <label class="form-check-label" for="elitist">
+                                                Elitista
+                                            </label>
+                                        </div>
+                                        <div class="form-check mb-0 compact-check">
+                                            <input class="form-check-input" type="radio" name="processingOption" id="rotation" value="rotation" checked>
+                                            <label class="form-check-label" for="rotation">
+                                                Roleta
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="d-grid gap-2 action-buttons">
+                                    <button type="button" class="btn btn-success btn-lg" id="startBtn">
+                                        <i class="bi bi-play-circle"></i> Iniciar
+                                    </button>
+                                    <button type="button" class="btn btn-danger btn-lg" id="resetBtn">
+                                        <i class="bi bi-arrow-clockwise"></i> Limpar
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-7 board-center-column">
+                    <div class="card shadow-lg board-card board-full board-side">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0">
+                                <i class="bi bi-grid-3x2"></i> Percurso do Cavalo
+                            </h5>
+                        </div>
+                        <div class="card-body p-3">
+                            <div class="board-playback-layout">
+                                <div class="animation-toolbar">
+                                    <div class="animation-speed">
+                                        <label for="animationSpeed" class="form-label mb-0">Velocidade</label>
+                                        <div class="animation-speed-slider-wrap">
+                                            <input type="range" id="animationSpeed" class="animation-speed-slider" min="0" max="3" step="1" value="2" aria-label="Velocidade da animação">
+                                            <div class="animation-speed-scale" aria-hidden="true">
+                                                <span>0</span>
+                                                <span>1</span>
+                                                <span>2</span>
+                                                <span>3</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="animation-actions" role="group" aria-label="Controles de animação">
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" id="prevStepBtn" title="Retroceder">
+                                            <i class="bi bi-skip-backward-fill"></i> Retroceder
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" id="pauseBtn" title="Pausar ou continuar">
+                                            <i class="bi bi-pause-fill"></i> Pausar
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" id="nextStepBtn" title="Avançar">
+                                            <i class="bi bi-skip-forward-fill"></i> Avançar
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="board-stage">
+                                    <div class="board-frame">
+                                        <div class="board-axis-corner"></div>
+                                        <div id="boardColLabels" class="board-axis board-axis-cols"></div>
+                                        <div id="boardRowLabels" class="board-axis board-axis-rows"></div>
+                                        <div id="chessBoard" class="chess-board">
+                                            <!-- O tabuleiro será gerado dinamicamente via JavaScript -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3 mt-1 align-items-stretch footer-split-row">
+                <div class="col-lg-5">
+                    <div class="card shadow-lg stats-card stats-footer-card">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0">
+                                <i class="bi bi-bar-chart"></i> Resultados e Estatísticas
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="results" class="alert alert-info">
+                                <i class="bi bi-info-circle"></i> Aguardando início da evolução...
+                            </div>
+
+                            <div class="row stats-grid mt-2 g-2">
+                                <div class="col-6 col-lg-3">
+                                    <div class="stat-box">
+                                        <h6 class="text-muted">Geração Atual</h6>
+                                        <h3 id="currentGeneration" class="text-primary">0</h3>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-lg-3">
+                                    <div class="stat-box">
+                                        <h6 class="text-muted">Melhor</h6>
+                                        <h3 id="bestFitness" class="text-success">0</h3>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-lg-3">
+                                    <div class="stat-box">
+                                        <h6 class="text-muted">Média</h6>
+                                        <h3 id="avgFitness" class="text-warning">0</h3>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-lg-3">
+                                    <div class="stat-box">
+                                        <h6 class="text-muted">Casas Visitadas</h6>
+                                        <h3 id="visitedSquares" class="text-danger">0/64</h3>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-3">
+                                <small class="text-muted">Progresso da Evolução</small>
+                                <div class="progress mt-1" style="height: 22px;">
+                                    <div id="progressBar" class="progress-bar bg-success" role="progressbar" aria-valuenow="0"
+                                        aria-valuemin="0" aria-valuemax="100" style="width: 0%">
+                                        <span id="progressPercent">0%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-7">
+                    <div class="card shadow-lg solution-card">
+                        <div class="card-header bg-secondary text-white">
+                            <h5 class="mb-0">
+                                <i class="bi bi-signpost-split"></i> Caminho da Solução
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="solutionPath" class="border rounded p-3 bg-light">
+                                <span class="text-muted">Aguardando resultado...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="./src/index.js"></script>
+</body>
+
+</html>
