@@ -14,7 +14,7 @@ function writeJson(res: ServerResponse, statusCode: number, payload: unknown): v
   res.writeHead(statusCode, {
     'Content-Type': 'application/json; charset=utf-8',
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+      'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
   });
   res.end(JSON.stringify(payload));
@@ -76,6 +76,24 @@ const server = createServer(async (req, res) => {
       const body = (await readJsonBody(req)) as ScoreInput;
       const saved = await scoreService.saveScore(body);
       writeJson(res, 201, { ok: true, data: saved });
+      return;
+    }
+
+    if (method === 'DELETE' && url.pathname.startsWith('/api/scores/')) {
+      const id = Number(url.pathname.split('/').pop());
+
+      if (!Number.isInteger(id) || id <= 0) {
+        writeJson(res, 400, { ok: false, error: 'ID invalido.' });
+        return;
+      }
+
+      const deleted = await scoreService.deleteScore(id);
+      if (!deleted) {
+        writeJson(res, 404, { ok: false, error: 'Score nao encontrado.' });
+        return;
+      }
+
+      writeJson(res, 200, { ok: true, data: { id } });
       return;
     }
 

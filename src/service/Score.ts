@@ -7,6 +7,7 @@ export type ScoreInput = {
   fitness?: number;
   fitnessMedia?: number;
   geracao?: number;
+  solucao?: unknown[];
   generations?: number;
   chromosomes?: number;
   selectionRate?: number;
@@ -25,6 +26,7 @@ export type StoredScore = {
   fitnessMedia: number;
   geracao: number;
   criadoEm: string;
+  solucao: unknown[];
   generations: number;
   chromosomes: number;
   selectionRate: number;
@@ -42,6 +44,7 @@ type ScoreClass = new (configForm?: Record<string, unknown>) => {
   setFitnessMedia?: (fitnessMedia: number) => void;
   setGeracao?: (geracao: number) => void;
   setCriadoEm?: (criadoEm: string | Date) => void;
+  setSolucao?: (solucao: unknown[]) => void;
   setGenerations?: (generations: number) => void;
   setChromosomes?: (chromosomes: number) => void;
   setSelectionRate?: (selectionRate: number) => void;
@@ -53,6 +56,34 @@ type ScoreClass = new (configForm?: Record<string, unknown>) => {
   setProcessingOption?: (processingOption: string) => void;
   toJSON?: () => unknown;
 };
+
+function nowAtMinusThreeIso(): string {
+  const offsetMinutes = -3 * 60;
+  const shifted = new Date(Date.now() + offsetMinutes * 60 * 1000);
+
+  const year = shifted.getUTCFullYear();
+  const month = String(shifted.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(shifted.getUTCDate()).padStart(2, '0');
+  const hours = String(shifted.getUTCHours()).padStart(2, '0');
+  const minutes = String(shifted.getUTCMinutes()).padStart(2, '0');
+  const seconds = String(shifted.getUTCSeconds()).padStart(2, '0');
+  const milliseconds = String(shifted.getUTCMilliseconds()).padStart(3, '0');
+
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.${milliseconds}-03:00`;
+}
+
+type StoredScoreRow = Omit<StoredScore, 'solucao'> & { solucao: string };
+
+function parseStoredSolution(raw: string | null | undefined): unknown[] {
+  if (!raw) return [];
+
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
 
 export class ScoreService {
   private db: Knex;
@@ -71,7 +102,7 @@ export class ScoreService {
     });
   }
 
-  private hydrateScore(row: StoredScore) {
+  private hydrateScore(row: StoredScoreRow) {
     const score = new this.ScoreClass();
 
     score.setId?.(row.id);
@@ -79,6 +110,7 @@ export class ScoreService {
     score.setFitnessMedia?.(row.fitnessMedia);
     score.setGeracao?.(row.geracao);
     score.setCriadoEm?.(row.criadoEm);
+    score.setSolucao?.(parseStoredSolution(row.solucao));
     score.setGenerations?.(row.generations);
     score.setChromosomes?.(row.chromosomes);
     score.setSelectionRate?.(row.selectionRate);
@@ -103,6 +135,7 @@ export class ScoreService {
         table.float('fitnessMedia').notNullable().defaultTo(0);
         table.integer('geracao').notNullable().defaultTo(0);
         table.text('criadoEm').notNullable();
+        table.text('solucao').notNullable().defaultTo('[]');
 
         table.integer('generations').notNullable().defaultTo(0);
         table.integer('chromosomes').notNullable().defaultTo(0);
@@ -114,6 +147,13 @@ export class ScoreService {
         table.boolean('activateLifeExpectancy').notNullable().defaultTo(false);
         table.string('processingOption').notNullable().defaultTo('rotation');
       });
+    } else {
+      const hasSolucao = await this.db.schema.hasColumn('scores', 'solucao');
+      if (!hasSolucao) {
+        await this.db.schema.alterTable('scores', (table) => {
+          table.text('solucao').notNullable().defaultTo('[]');
+        });
+      }
     }
 
     this.isSetup = true;
@@ -126,7 +166,8 @@ export class ScoreService {
       fitness: Number(input.fitness) || 0,
       fitnessMedia: Number(input.fitnessMedia) || 0,
       geracao: Number(input.geracao) || 0,
-      criadoEm: input.criadoEm || new Date().toISOString(),
+      criadoEm: input.criadoEm || nowAtMinusThreeIso(),
+      solucao: JSON.stringify(Array.isArray(input.solucao) ? input.solucao : []),
       generations: Number(input.generations) || 0,
       chromosomes: Number(input.chromosomes) || 0,
       selectionRate: Number(input.selectionRate) || 0,
@@ -141,7 +182,7 @@ export class ScoreService {
     const inserted = await this.db('scores').insert(row);
     const insertedId = Array.isArray(inserted) ? Number(inserted[0]) : Number(inserted);
 
-    const saved = await this.db<StoredScore>('scores').where({ id: insertedId }).first();
+    const saved = await this.db<StoredScoreRow>('scores').where({ id: insertedId }).first();
     if (!saved) {
       throw new Error('Falha ao recuperar score salvo.');
     }
@@ -149,11 +190,18 @@ export class ScoreService {
     return this.hydrateScore(saved) as unknown as StoredScore;
   }
 
+  async deleteScore(id: number): Promise<boolean> {
+    await this.setup();
+
+    const deleted = await this.db('scores').where({ id }).delete();
+    return deleted > 0;
+  }
+
   async listScores(limit = 50): Promise<StoredScore[]> {
     await this.setup();
 
     const safeLimit = Number.isFinite(limit) ? Math.max(1, Math.min(500, Math.floor(limit))) : 50;
-    const rows = await this.db<StoredScore>('scores').select('*').orderBy('id', 'desc').limit(safeLimit);
+    const rows = await this.db<StoredScoreRow>('scores').select('*').orderBy('id', 'desc').limit(safeLimit);
     return rows.map((row) => this.hydrateScore(row) as unknown as StoredScore);
   }
 

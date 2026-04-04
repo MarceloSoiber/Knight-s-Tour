@@ -5,7 +5,7 @@
 }
 
 body {
-    background: linear-gradient(135deg, #0097A7 0%, #00695C 100%);
+    background: #0097A7;
     height: 100vh;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     padding: 0;
@@ -578,15 +578,142 @@ h1 {
 .stats-footer-card {
     width: 100%;
     min-height: 300px;
-    height: 300px;
+    height: 400px;
 }
 
 .population-card {
     width: 100%;
     min-height: 300px;
-    height: 300px;
+    height: 400px;
     display: flex;
     flex-direction: column;
+}
+
+.history-card .card-body {
+    padding: 0.75rem;
+}
+
+.scores-table-status {
+    font-size: 0.75rem;
+    line-height: 1.2;
+}
+
+.scores-table-wrap {
+    border: 1px solid #d7e6f3;
+    border-radius: 10px;
+    max-height: 300px;
+    overflow: auto;
+    background: #ffffff;
+}
+
+#scoresTable {
+    font-size: 0.72rem;
+    white-space: nowrap;
+}
+
+#scoresTable thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: #f4f8fb;
+}
+
+#scoresTable tbody td:last-child,
+#scoresTable thead th:last-child {
+    text-align: center;
+}
+
+.score-delete-btn {
+    white-space: nowrap;
+}
+
+.score-modal {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    padding: 1rem;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.22s ease, visibility 0.22s ease;
+}
+
+.score-modal.is-visible {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.score-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(8, 28, 34, 0.68);
+    backdrop-filter: blur(3px);
+    opacity: 0;
+    transition: opacity 0.22s ease;
+}
+
+.score-modal.is-visible .score-modal-backdrop {
+    opacity: 1;
+}
+
+.score-modal-dialog {
+    position: relative;
+    z-index: 1;
+    width: min(100%, 460px);
+    border-radius: 14px;
+    background: linear-gradient(180deg, #ffffff 0%, #f7fbfd 100%);
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(0, 151, 167, 0.18);
+    overflow: hidden;
+    transform: translateY(12px) scale(0.98);
+    opacity: 0;
+    transition: transform 0.22s ease, opacity 0.22s ease;
+}
+
+.score-modal.is-visible .score-modal-dialog {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+}
+
+.score-modal-header,
+.score-modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.85rem 1rem;
+}
+
+.score-modal-header {
+    background: linear-gradient(135deg, #0097A7 0%, #00695C 100%);
+    color: #fff;
+}
+
+.score-modal-header .btn-close {
+    filter: invert(1);
+    opacity: 1;
+    box-shadow: none;
+}
+
+.score-modal-body {
+    padding: 1rem;
+    color: #37474f;
+    font-size: 0.9rem;
+    line-height: 1.45;
+}
+
+.score-modal-footer {
+    justify-content: flex-end;
+    border-top: 1px solid rgba(0, 151, 167, 0.12);
+    background: rgba(227, 242, 253, 0.4);
+}
+
+.score-modal-footer .btn {
+    min-width: 110px;
 }
 
 .population-card .card-body {
@@ -1101,5 +1228,9 @@ h1 {
 
     .row.g-4 {
         row-gap: 1.5rem;
+    }
+
+    #scoresTable {
+        font-size: 0.68rem;
     }
 }

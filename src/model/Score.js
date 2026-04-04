@@ -11,6 +11,7 @@ class Score {
         this.fitnessMedia = 0;
         this.geracao = 0;
         this.criadoEm = new Date();
+        this.solucao = [];
 
         // Campos de configuração da execução
         this.generations = Number(configForm.generations) || 0;
@@ -62,6 +63,14 @@ class Score {
 
     setCriadoEm(criadoEm) {
         this.criadoEm = criadoEm instanceof Date ? criadoEm : new Date(criadoEm);
+    }
+
+    getSolucao() {
+        return this.solucao;
+    }
+
+    setSolucao(solucao) {
+        this.solucao = Array.isArray(solucao) ? solucao : [];
     }
 
     getGenerations() {
@@ -143,6 +152,7 @@ class Score {
             fitnessMedia: this.fitnessMedia,
             geracao: this.geracao,
             criadoEm: this.criadoEm,
+            solucao: this.solucao,
             generations: this.generations,
             chromosomes: this.chromosomes,
             selectionRate: this.selectionRate,

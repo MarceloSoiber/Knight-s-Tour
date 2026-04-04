@@ -173,7 +173,7 @@
             </div>
 
             <div class="row g-3 mt-2 align-items-stretch footer-split-row">
-                <div class="col-12 col-lg-8">
+                <div class="col-12 col-lg-6">
                     <div class="card shadow-lg stats-card stats-footer-card">
                         <div class="card-header bg-info text-white">
                             <h5 class="mb-0">
@@ -234,7 +234,7 @@
                     </div>
                 </div>
 
-                <div class="col-12 col-lg-4">
+                <div class="col-12 col-lg-6">
                     <div class="card shadow-lg population-card">
                         <div class="card-header bg-dark text-white">
                             <h5 class="mb-0">
@@ -251,6 +251,74 @@
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <div class="row g-3 mt-2">
+                <div class="col-12">
+                    <div class="card shadow-lg history-card">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">
+                                <i class="bi bi-table"></i> Histórico de Scores
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <p id="scoresTableStatus" class="scores-table-status text-muted mb-2">
+                                Carregando histórico...
+                            </p>
+                            <div class="table-responsive scores-table-wrap">
+                                <table class="table table-sm table-striped table-hover align-middle mb-0" id="scoresTable">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th scope="col">Criação</th>
+                                            <th scope="col">Fitness</th>
+                                            <th scope="col">Média fitness</th>
+                                            <th scope="col">Gerações</th>
+                                            <th scope="col">Cromossomos</th>
+                                            <th scope="col">Taxa de Seleção</th>
+                                            <th scope="col">Taxa de Crossover</th>
+                                            <th scope="col">Taxa de Mutação</th>
+                                            <th scope="col">Séries por Mutação</th>
+                                            <th scope="col">Expectativa de Vida</th>
+                                            <th scope="col">Ativar Expectativa de Vida</th>
+                                            <th scope="col">Opção de Processamento</th>
+                                               <th scope="col">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="scoresTableBody">
+                                        <tr>
+                                            <td colspan="13" class="text-center text-muted py-3">Sem dados para exibir.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="deleteScoreModal" class="score-modal" aria-hidden="true">
+        <div class="score-modal-backdrop" data-modal-close></div>
+        <div class="score-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="deleteScoreModalTitle">
+            <div class="score-modal-header">
+                <h5 id="deleteScoreModalTitle" class="mb-0">
+                    <i class="bi bi-exclamation-triangle"></i> Remover score
+                </h5>
+                <button type="button" class="btn-close" data-modal-close aria-label="Fechar"></button>
+            </div>
+            <div class="score-modal-body">
+                <p id="deleteScoreModalMessage" class="mb-0">
+                    Tem certeza que deseja remover este score do histórico?
+                </p>
+            </div>
+            <div class="score-modal-footer">
+                <button type="button" class="btn btn-outline-secondary" id="deleteScoreCancelBtn" data-modal-close>
+                    Cancelar
+                </button>
+                <button type="button" class="btn btn-danger" id="deleteScoreConfirmBtn">
+                    <i class="bi bi-trash"></i> Remover
+                </button>
             </div>
         </div>
     </div>

@@ -28,6 +28,7 @@ class KnightsTour {
         this.currentConfig = null;
         this.pendingScore = null;
         this.isScoreSaved = false;
+        this.deleteScoreTargetId = null;
         this.animationSpeedPresets = [700, 450, 300, 150];
         this.generationController = new GenerationController(this.boardSize);
         this.boardView = new BoardView(this.boardSize);
@@ -35,8 +36,14 @@ class KnightsTour {
         this.populationChartView = new PopulationChartView();
         this.controlsView = new PlaybackControlsView();
 
+        this.deleteScoreModalEl = document.getElementById('deleteScoreModal');
+        this.deleteScoreModalMessageEl = document.getElementById('deleteScoreModalMessage');
+        this.deleteScoreCancelBtn = document.getElementById('deleteScoreCancelBtn');
+        this.deleteScoreConfirmBtn = document.getElementById('deleteScoreConfirmBtn');
+
         this.boardView.initializeBoard();
         this.attachEventListeners();
+        this.loadScoresFromDatabase();
     }
 
     attachEventListeners() {
@@ -56,6 +63,41 @@ class KnightsTour {
         });
 
         this.statsView.bindSave(() => this.saveScore());
+
+        if (this.statsView.scoresTableBodyEl) {
+            this.statsView.scoresTableBodyEl.addEventListener('click', (event) => {
+                const button = event.target.closest('.score-delete-btn');
+                if (!button) return;
+
+                const scoreId = Number(button.dataset.scoreId);
+                this.promptRemoveScore(scoreId);
+            });
+        }
+
+        if (this.deleteScoreConfirmBtn) {
+            this.deleteScoreConfirmBtn.addEventListener('click', () => {
+                if (!this.deleteScoreTargetId) return;
+                this.removeScore(this.deleteScoreTargetId);
+            });
+        }
+
+        if (this.deleteScoreCancelBtn) {
+            this.deleteScoreCancelBtn.addEventListener('click', () => this.closeDeleteScoreModal());
+        }
+
+        if (this.deleteScoreModalEl) {
+            this.deleteScoreModalEl.addEventListener('click', (event) => {
+                if (event.target?.dataset?.modalClose !== undefined) {
+                    this.closeDeleteScoreModal();
+                }
+            });
+        }
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && this.deleteScoreModalEl?.classList.contains('is-visible')) {
+                this.closeDeleteScoreModal();
+            }
+        });
 
         this.syncAnimationSpeedFromSlider();
         this.controlsView.setControlsEnabled(false);
@@ -320,6 +362,7 @@ class KnightsTour {
         score.setFitnessMedia(evolutionResult.avgFitness);
         score.setGeracao(evolutionResult.generationsExecuted);
         score.setCriadoEm(new Date());
+        score.setSolucao(evolutionResult.solution);
 
         this.pendingScore = score;
         return score;
@@ -357,12 +400,101 @@ class KnightsTour {
             this.statsView.setSaveStatus('Dados salvos com sucesso no SQLite.', 'success');
             this.statsView.setSaveCompleted();
             this.isScoreSaved = true;
+            await this.loadScoresFromDatabase();
         } catch (error) {
             this.statsView.setSaveStatus(error instanceof Error ? error.message : 'Erro inesperado ao salvar.', 'danger');
         } finally {
             this.statsView.setSaveLoading(false);
             if (this.pendingScore && !this.isScoreSaved) {
                 this.statsView.setSaveEnabled(true);
+            }
+        }
+    }
+
+    async loadScoresFromDatabase() {
+        this.statsView.setScoresLoading('Carregando histórico do banco...');
+
+        try {
+            const response = await fetch(`${SCORE_API_URL}?limit=100`);
+            const payload = await response.json();
+
+            if (!response.ok || !payload.ok) {
+                throw new Error(payload.error || 'Falha ao carregar histórico.');
+            }
+
+            const rows = Array.isArray(payload.data) ? payload.data : [];
+            this.statsView.renderScoresTable(rows);
+            this.statsView.setScoresStatus(`Total de registros: ${rows.length}`, 'success');
+        } catch (error) {
+            this.statsView.renderScoresTable([]);
+            this.statsView.setScoresError(error instanceof Error ? error.message : 'Erro ao buscar histórico.');
+        }
+    }
+
+    promptRemoveScore(scoreId) {
+        if (!Number.isInteger(scoreId) || scoreId <= 0) {
+            this.statsView.setScoresError('ID de score inválido.');
+            return;
+        }
+
+        this.deleteScoreTargetId = scoreId;
+
+        if (this.deleteScoreModalMessageEl) {
+            this.deleteScoreModalMessageEl.textContent = `Tem certeza que deseja remover o score #${scoreId} do histórico?`;
+        }
+
+        this.openDeleteScoreModal();
+    }
+
+    openDeleteScoreModal() {
+        if (!this.deleteScoreModalEl) return;
+
+        this.deleteScoreModalEl.classList.add('is-visible');
+        this.deleteScoreModalEl.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+    }
+
+    closeDeleteScoreModal() {
+        if (!this.deleteScoreModalEl) return;
+
+        this.deleteScoreModalEl.classList.remove('is-visible');
+        this.deleteScoreModalEl.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+        this.deleteScoreTargetId = null;
+    }
+
+    async removeScore(scoreId) {
+        if (!Number.isInteger(scoreId) || scoreId <= 0) {
+            this.statsView.setScoresError('ID de score inválido.');
+            return;
+        }
+
+        this.closeDeleteScoreModal();
+
+        try {
+            if (this.deleteScoreConfirmBtn) {
+                this.deleteScoreConfirmBtn.disabled = true;
+                this.deleteScoreConfirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Removendo...';
+            }
+
+            const response = await fetch(`${SCORE_API_URL}/${scoreId}`, {
+                method: 'DELETE'
+            });
+
+            const payload = await response.json();
+
+            if (!response.ok || !payload.ok) {
+                throw new Error(payload.error || 'Falha ao remover o score.');
+            }
+
+            await this.loadScoresFromDatabase();
+            this.statsView.setScoresStatus(`Score ${scoreId} removido com sucesso.`, 'success');
+        } catch (error) {
+            this.statsView.setScoresError(error instanceof Error ? error.message : 'Erro inesperado ao remover score.');
+        } finally {
+            if (this.deleteScoreConfirmBtn) {
+                this.deleteScoreConfirmBtn.disabled = false;
+                this.deleteScoreConfirmBtn.innerHTML = '<i class="bi bi-trash"></i>';
             }
         }
     }

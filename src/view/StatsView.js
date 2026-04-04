@@ -10,6 +10,95 @@ class StatsView {
         this.solutionPathEl = document.getElementById('solutionPath');
         this.saveScoreBtn = document.getElementById('saveScoreBtn');
         this.saveScoreStatusEl = document.getElementById('saveScoreStatus');
+        this.scoresTableBodyEl = document.getElementById('scoresTableBody');
+        this.scoresTableStatusEl = document.getElementById('scoresTableStatus');
+    }
+
+    setScoresLoading(message = 'Carregando histórico...') {
+        if (this.scoresTableStatusEl) {
+            this.scoresTableStatusEl.className = 'scores-table-status text-muted mb-2';
+            this.scoresTableStatusEl.textContent = message;
+        }
+    }
+
+    setScoresError(message) {
+        if (this.scoresTableStatusEl) {
+            this.scoresTableStatusEl.className = 'scores-table-status text-danger mb-2';
+            this.scoresTableStatusEl.textContent = message;
+        }
+    }
+
+    setScoresStatus(message, variant = 'muted') {
+        if (this.scoresTableStatusEl) {
+            this.scoresTableStatusEl.className = `scores-table-status text-${variant} mb-2`;
+            this.scoresTableStatusEl.textContent = message;
+        }
+    }
+
+    renderScoresTable(rows) {
+        if (!this.scoresTableBodyEl) return;
+
+        this.scoresTableBodyEl.innerHTML = '';
+
+        if (!Array.isArray(rows) || rows.length === 0) {
+            this.scoresTableBodyEl.innerHTML = '<tr><td colspan="13" class="text-center text-muted py-3">Sem dados para exibir.</td></tr>';
+            return;
+        }
+
+        rows.forEach((row) => {
+            const tr = document.createElement('tr');
+            const values = [
+                this.formatDateValue(row.criadoEm),
+                this.formatNumericValue(row.fitness),
+                this.formatNumericValue(row.fitnessMedia),
+                this.formatNumericValue(row.generations),
+                this.formatNumericValue(row.chromosomes),
+                this.formatNumericValue(row.selectionRate),
+                this.formatNumericValue(row.crossoverRate),
+                this.formatNumericValue(row.mutationRate),
+                this.formatNumericValue(row.seriesPerMutation),
+                this.formatNumericValue(row.lifeExpectancy),
+                row.activateLifeExpectancy ? 'true' : 'false',
+                row.processingOption || '-'
+            ];
+
+            values.forEach((value) => {
+                const td = document.createElement('td');
+                td.textContent = String(value);
+                tr.appendChild(td);
+            });
+
+            const actionCell = document.createElement('td');
+            const actionButton = document.createElement('button');
+            actionButton.type = 'button';
+            actionButton.className = 'btn btn-sm btn-outline-danger score-delete-btn';
+            actionButton.dataset.scoreId = String(row.id);
+            actionButton.innerHTML = '<i class="bi bi-trash"></i>';
+            actionCell.appendChild(actionButton);
+            tr.appendChild(actionCell);
+
+            this.scoresTableBodyEl.appendChild(tr);
+        });
+    }
+
+    formatNumericValue(value) {
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric)) return '-';
+
+        return Number.isInteger(numeric) ? String(numeric) : numeric.toFixed(2);
+    }
+
+    formatDateValue(value) {
+        if (!value) return '-';
+
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) {
+            return String(value);
+        }
+
+        return date.toLocaleString('pt-BR', {
+            timeZone: 'America/Sao_Paulo'
+        });
     }
 
     bindSave(onSave) {
