@@ -7,16 +7,22 @@
     "scripts": {
         "start": "browser-sync -w . --server --files 'index.html, data/*.json, js/*.js' --port 3000",
         "dev": "browser-sync -w . --inspect --server --files 'index.html, data/*.json, js/*.js' --port 3000",
+        "server": "node --experimental-strip-types src/server.ts",
         "test": "echo \"Error: no test specified\" && exit 1"
     },
     "keywords": [
         "javascript",
-        "genetic algorithm"
+        "genetic algorithm",
+        "sqlite",
+        "knight's tour"
     ],
     "author": "",
     "license": "ISC",
     "devDependencies": {
         "browser-sync": "^3.0.4",
-        "better-sqlite3": "^11.10.0"
+        "better-sqlite3": "^11.10.0",
+        "knex": "^3.1.0",
+        "@libsql/client": "^0.17.0"
+
     }
 }
