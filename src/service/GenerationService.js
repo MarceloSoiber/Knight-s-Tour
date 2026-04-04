@@ -26,10 +26,13 @@ class GenerationService {
 			} else {
 				this.gerarGeracaoRoleta(cfg);
 			}
-
 			generation += 1;
 			this.ordenarPopulacao();
 			best = this.populacao[0];
+
+			if (best.getPontuacao() === this.totalCasas) {
+				break;
+			}
 
 			if (callbacks.onGeneration) {
 				callbacks.onGeneration({
@@ -220,6 +223,9 @@ class GenerationService {
 				cromossomo.setIdade(lifeExpectancy);
 				novaPopulacao.push(cromossomo);
 			} else if (cromossomo.getIdade() > 0) {
+				novaPopulacao.push(cromossomo);
+			}else{
+				cromossomo.setPontuacao(0);
 				novaPopulacao.push(cromossomo);
 			}
 		}
