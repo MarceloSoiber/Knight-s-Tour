@@ -5,6 +5,9 @@ import BoardView from './view/BoardView.js';
 import StatsView from './view/StatsView.js';
 import PlaybackControlsView from './view/PlaybackControlsView.js';
 import PopulationChartView from './view/PopulationChartView.js';
+import Score from './model/Score.js';
+
+const SCORE_API_URL = 'http://localhost:3333/api/scores';
 
 class KnightsTour {
     constructor() {
@@ -22,6 +25,9 @@ class KnightsTour {
         this.avgFitness = 0;
         this.totalGenerations = 0;
         this.solution = [];
+        this.currentConfig = null;
+        this.pendingScore = null;
+        this.isScoreSaved = false;
         this.animationSpeedPresets = [700, 450, 300, 150];
         this.generationController = new GenerationController(this.boardSize);
         this.boardView = new BoardView(this.boardSize);
@@ -48,6 +54,8 @@ class KnightsTour {
                 }
             }
         });
+
+        this.statsView.bindSave(() => this.saveScore());
 
         this.syncAnimationSpeedFromSlider();
         this.controlsView.setControlsEnabled(false);
@@ -89,8 +97,13 @@ class KnightsTour {
         this.isRunning = true;
         this.stopRequested = false;
         const config = this.getFormValues();
+        this.currentConfig = config;
+        this.pendingScore = null;
+        this.isScoreSaved = false;
         this.controlsView.setStartRunning(true);
         this.controlsView.setStopEnabled(true);
+        this.statsView.resetSaveButton();
+        this.statsView.setSaveStatus('O salvamento será liberado ao final do processamento.');
         
         this.totalGenerations = config.generations;
         this.statsView.resetProgress();
@@ -111,10 +124,19 @@ class KnightsTour {
 
         this.solution = evolutionResult.solution;
         this.statsView.showEvolutionCompleted(evolutionResult.generationsExecuted, evolutionResult.bestFitness);
+        this.preparePendingScore(config, evolutionResult);
+
+        if (!evolutionResult.stopped) {
+            this.statsView.setSaveEnabled(true);
+            this.statsView.setSaveStatus('Processamento finalizado. Você já pode salvar os dados.', 'success');
+        }
         
         // Animar solução somente quando não houve parada manual
         if (!evolutionResult.stopped) {
             await this.animateSolution();
+        } else {
+            this.statsView.setSaveEnabled(false);
+            this.statsView.setSaveStatus('Processamento interrompido. O salvamento foi desabilitado.', 'warning');
         }
         
         this.controlsView.setStartRunning(false);
@@ -292,6 +314,59 @@ class KnightsTour {
         this.populationChartView.update(this.currentGeneration, chromosomeTotal);
     }
 
+    preparePendingScore(config, evolutionResult) {
+        const score = new Score(config);
+        score.setFitness(evolutionResult.bestFitness);
+        score.setFitnessMedia(evolutionResult.avgFitness);
+        score.setGeracao(evolutionResult.generationsExecuted);
+        score.setCriadoEm(new Date());
+
+        this.pendingScore = score;
+        return score;
+    }
+
+    async saveScore(event) {
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+
+        if (!this.pendingScore) {
+            this.statsView.setSaveStatus('Execute o processamento até o final antes de salvar.', 'warning');
+            return;
+        }
+
+        this.statsView.setSaveLoading(true);
+        this.statsView.setSaveStatus('Enviando dados para o servidor...', 'primary');
+
+        try {
+            const response = await fetch(SCORE_API_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(this.pendingScore)
+            });
+
+            const payload = await response.json();
+
+            if (!response.ok || !payload.ok) {
+                throw new Error(payload.error || 'Falha ao salvar o score.');
+            }
+
+            this.statsView.setSaveStatus('Dados salvos com sucesso no SQLite.', 'success');
+            this.statsView.setSaveCompleted();
+            this.isScoreSaved = true;
+        } catch (error) {
+            this.statsView.setSaveStatus(error instanceof Error ? error.message : 'Erro inesperado ao salvar.', 'danger');
+        } finally {
+            this.statsView.setSaveLoading(false);
+            if (this.pendingScore && !this.isScoreSaved) {
+                this.statsView.setSaveEnabled(true);
+            }
+        }
+    }
+
     reset() {
         this.stopAnimationPlayback(true);
 
@@ -300,6 +375,9 @@ class KnightsTour {
         this.avgFitness = 0;
         this.stopRequested = false;
         this.solution = [];
+        this.currentConfig = null;
+        this.pendingScore = null;
+        this.isScoreSaved = false;
         this.boardView.clearBoardState();
         this.boardView.hideKnight();
         this.populationChartView.reset();

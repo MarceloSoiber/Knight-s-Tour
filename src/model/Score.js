@@ -7,7 +7,6 @@ class Score {
         const [configForm = {}] = arguments;
 
         this.id = null;
-        this.valor = 0;
         this.fitness = 0;
         this.fitnessMedia = 0;
         this.geracao = 0;
@@ -31,14 +30,6 @@ class Score {
 
     setId(id) {
         this.id = id;
-    }
-
-    getValor() {
-        return this.valor;
-    }
-
-    setValor(valor) {
-        this.valor = Number(valor) || 0;
     }
 
     getFitness() {
@@ -148,7 +139,6 @@ class Score {
     toJSON() {
         return {
             id: this.id,
-            valor: this.valor,
             fitness: this.fitness,
             fitnessMedia: this.fitnessMedia,
             geracao: this.geracao,

@@ -5,8 +5,8 @@
     "main": "index.js",
     "type": "module",
     "scripts": {
-        "start": "browser-sync -w . --server --files 'index.html, data/*.json, js/*.js' --port 3000",
-        "dev": "browser-sync -w . --inspect --server --files 'index.html, data/*.json, js/*.js' --port 3000",
+        "start": "browser-sync --server --port 3000 --no-watch --no-ui --no-notify --no-open",
+        "dev": "browser-sync --server --port 3000 --no-watch --no-ui --no-notify --no-open",
         "server": "node --experimental-strip-types src/server.ts",
         "test": "echo \"Error: no test specified\" && exit 1"
     },
@@ -14,7 +14,8 @@
         "javascript",
         "genetic algorithm",
         "sqlite",
-        "knight's tour"
+        "knight's tour",
+        "memory"
     ],
     "author": "",
     "license": "ISC",

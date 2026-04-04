@@ -656,6 +656,34 @@ h1 {
     flex-direction: column;
     min-height: 0;
     gap: 0.24rem;
+    overflow-y: auto;
+}
+
+#results {
+    flex: 0 0 auto;
+    margin-bottom: 0.2rem;
+}
+
+.stats-grid {
+    flex: 0 0 auto;
+}
+
+.save-score-panel {
+    margin-top: auto;
+    border: 1px dashed rgba(0, 151, 167, 0.35);
+    border-radius: 10px;
+    padding: 0.7rem;
+    background: linear-gradient(180deg, rgba(227, 242, 253, 0.72) 0%, rgba(243, 251, 251, 0.88) 100%);
+}
+
+.save-score-panel .btn {
+    font-size: 0.82rem;
+}
+
+.save-score-status {
+    font-size: 0.72rem;
+    line-height: 1.25;
+    min-height: 1rem;
 }
 
 .path-footer-card {

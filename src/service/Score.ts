@@ -4,7 +4,6 @@ import type { Knex } from 'knex';
 import ScoreModel from '../model/Score.js';
 
 export type ScoreInput = {
-  valor?: number;
   fitness?: number;
   fitnessMedia?: number;
   geracao?: number;
@@ -22,7 +21,6 @@ export type ScoreInput = {
 
 export type StoredScore = {
   id: number;
-  valor: number;
   fitness: number;
   fitnessMedia: number;
   geracao: number;
@@ -40,7 +38,6 @@ export type StoredScore = {
 
 type ScoreClass = new (configForm?: Record<string, unknown>) => {
   setId?: (id: number | null) => void;
-  setValor?: (valor: number) => void;
   setFitness?: (fitness: number) => void;
   setFitnessMedia?: (fitnessMedia: number) => void;
   setGeracao?: (geracao: number) => void;
@@ -78,7 +75,6 @@ export class ScoreService {
     const score = new this.ScoreClass();
 
     score.setId?.(row.id);
-    score.setValor?.(row.valor);
     score.setFitness?.(row.fitness);
     score.setFitnessMedia?.(row.fitnessMedia);
     score.setGeracao?.(row.geracao);
@@ -103,7 +99,6 @@ export class ScoreService {
     if (!exists) {
       await this.db.schema.createTable('scores', (table) => {
         table.increments('id').primary();
-        table.integer('valor').notNullable().defaultTo(0);
         table.float('fitness').notNullable().defaultTo(0);
         table.float('fitnessMedia').notNullable().defaultTo(0);
         table.integer('geracao').notNullable().defaultTo(0);
@@ -128,7 +123,6 @@ export class ScoreService {
     await this.setup();
 
     const row = {
-      valor: Number(input.valor) || 0,
       fitness: Number(input.fitness) || 0,
       fitnessMedia: Number(input.fitnessMedia) || 0,
       geracao: Number(input.geracao) || 0,

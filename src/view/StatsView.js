@@ -8,6 +8,26 @@ class StatsView {
         this.progressPercentEl = document.getElementById('progressPercent');
         this.resultsEl = document.getElementById('results');
         this.solutionPathEl = document.getElementById('solutionPath');
+        this.saveScoreBtn = document.getElementById('saveScoreBtn');
+        this.saveScoreStatusEl = document.getElementById('saveScoreStatus');
+    }
+
+    bindSave(onSave) {
+        if (this.saveScoreBtn && onSave) {
+            this.saveScoreBtn.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                onSave(event);
+            });
+        }
+    }
+
+    resetSaveButton() {
+        if (!this.saveScoreBtn) return;
+
+        this.saveScoreBtn.dataset.saved = 'false';
+        this.saveScoreBtn.disabled = true;
+        this.saveScoreBtn.innerHTML = '<i class="bi bi-save"></i> Salvar dados';
     }
 
     setGenerationStats(currentGeneration, bestFitness, avgFitness) {
@@ -50,6 +70,43 @@ class StatsView {
                 Evolução concluída em ${generationsExecuted} gerações. Melhor fitness: ${bestFitness}/64
             </div>
         `;
+    }
+
+    setSaveEnabled(enabled) {
+        if (this.saveScoreBtn) {
+            this.saveScoreBtn.disabled = !enabled;
+        }
+    }
+
+    setSaveLoading(isLoading) {
+        if (!this.saveScoreBtn) return;
+
+        if (isLoading) {
+            this.saveScoreBtn.disabled = true;
+            this.saveScoreBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Salvando...';
+            return;
+        }
+
+        if (this.saveScoreBtn.dataset.saved === 'true') {
+            return;
+        }
+
+        this.saveScoreBtn.innerHTML = '<i class="bi bi-save"></i> Salvar dados';
+    }
+
+    setSaveCompleted() {
+        if (!this.saveScoreBtn) return;
+
+        this.saveScoreBtn.dataset.saved = 'true';
+        this.saveScoreBtn.disabled = true;
+        this.saveScoreBtn.innerHTML = '<i class="bi bi-check2-circle"></i> Dados salvos';
+    }
+
+    setSaveStatus(message, variant = 'muted') {
+        if (!this.saveScoreStatusEl) return;
+
+        this.saveScoreStatusEl.className = `save-score-status text-${variant} mt-2`;
+        this.saveScoreStatusEl.textContent = message;
     }
 
     showAnimating(solutionLength) {
@@ -123,6 +180,8 @@ class StatsView {
     resetOutput() {
         this.setVisitedSquares(0);
         this.resetProgress();
+        this.resetSaveButton();
+        this.setSaveStatus('O salvamento será liberado ao final do processamento.');
 
         if (this.solutionPathEl) {
             this.solutionPathEl.innerHTML = '<span class="text-muted">Aguardando resultado...</span>';
