@@ -13,8 +13,14 @@ class GenerationService {
 
 		let best = this.populacao[0];
 		let generation = 0;
+		let stopped = false;
 
 		while (generation < cfg.generations) {
+			if (callbacks.shouldStop && callbacks.shouldStop()) {
+				stopped = true;
+				break;
+			}
+
 			if (cfg.processingOption === 'elitist') {
 				this.gerarGeracaoElitista(cfg);
 			} else {
@@ -30,8 +36,14 @@ class GenerationService {
 					generation,
 					bestFitness: best.getPontuacao(),
 					avgFitness: this.calcularMediaFitness(),
+					chromosomeTotal: this.populacao.length,
 					totalGenerations: cfg.generations
 				});
+			}
+
+			if (callbacks.shouldStop && callbacks.shouldStop()) {
+				stopped = true;
+				break;
 			}
 
 			if (best.getPontuacao() === this.totalCasas) {
@@ -51,7 +63,8 @@ class GenerationService {
 			generationsExecuted: generation,
 			bestFitness: best.getPontuacao(),
 			avgFitness: this.calcularMediaFitness(),
-			solution: validPath
+			solution: validPath,
+			stopped
 		};
 	}
 

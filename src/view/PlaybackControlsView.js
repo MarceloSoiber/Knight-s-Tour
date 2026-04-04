@@ -1,6 +1,7 @@
 class PlaybackControlsView {
     constructor() {
         this.startBtn = document.getElementById('startBtn');
+        this.stopBtn = document.getElementById('stopBtn');
         this.resetBtn = document.getElementById('resetBtn');
         this.pauseBtn = document.getElementById('pauseBtn');
         this.prevStepBtn = document.getElementById('prevStepBtn');
@@ -8,8 +9,9 @@ class PlaybackControlsView {
         this.speedSlider = document.getElementById('animationSpeed');
     }
 
-    bind({ onStart, onReset, onPause, onPrev, onNext, onSpeedInput }) {
+    bind({ onStart, onStop, onReset, onPause, onPrev, onNext, onSpeedInput }) {
         if (this.startBtn && onStart) this.startBtn.addEventListener('click', onStart);
+        if (this.stopBtn && onStop) this.stopBtn.addEventListener('click', onStop);
         if (this.resetBtn && onReset) this.resetBtn.addEventListener('click', onReset);
         if (this.pauseBtn && onPause) this.pauseBtn.addEventListener('click', onPause);
         if (this.prevStepBtn && onPrev) this.prevStepBtn.addEventListener('click', onPrev);
@@ -26,7 +28,14 @@ class PlaybackControlsView {
         if (!this.startBtn) return;
 
         this.startBtn.disabled = isRunning;
-        this.startBtn.textContent = isRunning ? 'Evoluindo...' : 'Iniciar Evolução';
+        this.startBtn.innerHTML = isRunning
+            ? '<i class="bi bi-hourglass-split"></i> Rodando'
+            : '<i class="bi bi-play-circle"></i> Iniciar';
+    }
+
+    setStopEnabled(enabled) {
+        if (!this.stopBtn) return;
+        this.stopBtn.disabled = !enabled;
     }
 
     setControlsEnabled(enabled) {

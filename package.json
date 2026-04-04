@@ -16,6 +16,7 @@
     "author": "",
     "license": "ISC",
     "devDependencies": {
-        "browser-sync": "^3.0.4"
+        "browser-sync": "^3.0.4",
+        "better-sqlite3": "^11.10.0"
     }
 }

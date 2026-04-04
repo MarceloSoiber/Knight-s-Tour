@@ -36,7 +36,8 @@ body {
 }
 
 .app-title {
-    margin-bottom: 0.7rem !important;
+    margin-top: 1.0rem !important;
+    margin-bottom: 2.0rem !important;
     flex-shrink: 0;
 }
 
@@ -49,10 +50,10 @@ body {
 
 .app-main-split {
     min-height: 0;
-    height: 100%;
+    height: var(--top-panels-height);
     flex: 0 0 auto;
     align-items: stretch;
-    --top-panels-height: min(52vh, 560px);
+    --top-panels-height: 520px;
 }
 
 .left-stack,
@@ -69,8 +70,23 @@ body {
     align-items: stretch;
 }
 
+.board-solution-row {
+    height: 100%;
+    min-height: 0;
+}
+
+.board-solution-row > [class*="col-"] {
+    min-height: 0;
+    display: flex;
+}
+
+.board-solution-row .card {
+    width: 100%;
+}
+
 .left-stack {
     gap: 0.45rem;
+    padding-bottom: 13px;
 }
 
 .compact-config {
@@ -89,14 +105,14 @@ body {
 }
 
 .top-card {
-    height: auto;
+    height: 100%;
 }
 
 h1 {
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
     font-weight: 700;
     letter-spacing: 1px;
-    font-size: 1.48rem;
+    font-size: 2.0rem;
     margin-bottom: 0.6rem !important;
 }
 
@@ -337,7 +353,18 @@ h1 {
 }
 
 .action-buttons {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.action-buttons .btn {
+    min-height: 42px;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.28rem;
+    font-size: 0.85rem;
+    padding: 0.5rem 0.45rem;
 }
 
 .alert {
@@ -363,7 +390,7 @@ h1 {
 #configForm {
     display: flex;
     flex-direction: column;
-    height: 100%;
+    height: 95%;
 }
 
 #configForm .action-buttons {
@@ -545,11 +572,68 @@ h1 {
 
 .stats-card {
     min-height: 300px;
+    height: 300px;
 }
 
 .stats-footer-card {
     width: 100%;
-    min-height: auto;
+    min-height: 300px;
+    height: 300px;
+}
+
+.population-card {
+    width: 100%;
+    min-height: 300px;
+    height: 300px;
+    display: flex;
+    flex-direction: column;
+}
+
+.population-card .card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    min-height: 0;
+    flex: 1;
+}
+
+.population-chart-caption {
+    font-size: 0.68rem;
+    line-height: 1.25;
+}
+
+.population-chart-wrap {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    height: auto;
+    border-radius: 10px;
+    background: linear-gradient(180deg, #f8fbfd 0%, #eef6fb 100%);
+    border: 1px solid #d7e6f3;
+    overflow: hidden;
+}
+
+.population-chart-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.solution-side-card {
+    width: 100%;
+    min-height: 0;
+}
+
+.solution-side-card .card-body {
+    padding: 0.65rem;
+}
+
+.solution-row {
+    margin-top: 0.65rem;
+}
+
+.solution-row-card {
+    min-height: 180px;
 }
 
 .solution-card {
@@ -864,6 +948,10 @@ h1 {
 
     .board-center-column {
         padding-top: 0;
+    }
+
+    .board-solution-row {
+        height: auto;
     }
 
     .board-side {

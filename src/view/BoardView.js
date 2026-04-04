@@ -14,7 +14,7 @@ class BoardView {
         if (this.colLabelsContainer) this.colLabelsContainer.innerHTML = '';
         if (this.rowLabelsContainer) this.rowLabelsContainer.innerHTML = '';
 
-        for (let index = 0; index < this.boardSize; index++) {
+        for (let index = 1; index < this.boardSize + 1; index++) {
             if (this.colLabelsContainer) {
                 const colLabel = document.createElement('span');
                 colLabel.className = 'board-axis-value';

@@ -4,6 +4,7 @@ import GenerationController from './controller/GenerationController.js';
 import BoardView from './view/BoardView.js';
 import StatsView from './view/StatsView.js';
 import PlaybackControlsView from './view/PlaybackControlsView.js';
+import PopulationChartView from './view/PopulationChartView.js';
 
 class KnightsTour {
     constructor() {
@@ -15,6 +16,7 @@ class KnightsTour {
         this.animationStep = -1;
         this.animationSpeedMs = 300;
         this.animationResolver = null;
+        this.stopRequested = false;
         this.currentGeneration = 0;
         this.bestFitness = 0;
         this.avgFitness = 0;
@@ -24,6 +26,7 @@ class KnightsTour {
         this.generationController = new GenerationController(this.boardSize);
         this.boardView = new BoardView(this.boardSize);
         this.statsView = new StatsView();
+        this.populationChartView = new PopulationChartView();
         this.controlsView = new PlaybackControlsView();
 
         this.boardView.initializeBoard();
@@ -33,6 +36,7 @@ class KnightsTour {
     attachEventListeners() {
         this.controlsView.bind({
             onStart: () => this.startEvolution(),
+            onStop: () => this.requestStop(),
             onReset: () => this.reset(),
             onPause: () => this.togglePause(),
             onPrev: () => this.stepBackward(),
@@ -48,6 +52,13 @@ class KnightsTour {
         this.syncAnimationSpeedFromSlider();
         this.controlsView.setControlsEnabled(false);
         this.controlsView.setPauseButton(this.isAnimationPaused);
+        this.controlsView.setStopEnabled(false);
+    }
+
+    requestStop() {
+        if (!this.isRunning) return;
+        this.stopRequested = true;
+        this.controlsView.setStopEnabled(false);
     }
 
     syncAnimationSpeedFromSlider() {
@@ -76,29 +87,38 @@ class KnightsTour {
         this.reset();
         
         this.isRunning = true;
+        this.stopRequested = false;
         const config = this.getFormValues();
         this.controlsView.setStartRunning(true);
+        this.controlsView.setStopEnabled(true);
         
         this.totalGenerations = config.generations;
+        this.statsView.resetProgress();
+        this.statsView.setProgress(0, this.totalGenerations);
         this.statsView.showRunning();
 
         const evolutionResult = await this.generationController.run(config, {
+            shouldStop: () => this.stopRequested,
             onGeneration: (progress) => {
                 this.currentGeneration = progress.generation;
                 this.bestFitness = progress.bestFitness;
                 this.avgFitness = progress.avgFitness;
                 this.updateStats();
                 this.updateProgressBar();
+                this.updatePopulationChart(progress.chromosomeTotal);
             }
         });
 
         this.solution = evolutionResult.solution;
         this.statsView.showEvolutionCompleted(evolutionResult.generationsExecuted, evolutionResult.bestFitness);
         
-        // Animar solução
-        await this.animateSolution();
+        // Animar solução somente quando não houve parada manual
+        if (!evolutionResult.stopped) {
+            await this.animateSolution();
+        }
         
         this.controlsView.setStartRunning(false);
+        this.controlsView.setStopEnabled(false);
         this.isRunning = false;
     }
 
@@ -268,20 +288,27 @@ class KnightsTour {
         this.statsView.setProgress(this.currentGeneration, this.totalGenerations);
     }
 
+    updatePopulationChart(chromosomeTotal) {
+        this.populationChartView.update(this.currentGeneration, chromosomeTotal);
+    }
+
     reset() {
         this.stopAnimationPlayback(true);
 
         this.currentGeneration = 0;
         this.bestFitness = 0;
         this.avgFitness = 0;
+        this.stopRequested = false;
         this.solution = [];
         this.boardView.clearBoardState();
         this.boardView.hideKnight();
+        this.populationChartView.reset();
         
         // Resetar stats
         this.updateStats();
         this.statsView.resetOutput();
         this.setAnimationControlsState(false);
+        this.controlsView.setStopEnabled(false);
         this.updatePauseButton();
     }
 }
