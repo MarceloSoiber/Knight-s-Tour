@@ -8,10 +8,10 @@ The project includes a visual interface to follow the evolution, tune the search
 
 The project is split into two layers:
 
-- `GenerationController`: thin orchestration layer responsible for coordinating the execution flow.
-- `GenerationService`: contains the genetic algorithm implementation and all population operations.
+- Frontend client: renders the board, controls, charts, and score history UI.
+- Backend API: runs the genetic algorithm jobs and persists score history in SQLite.
 
-This separation makes the code easier to maintain and keeps the controller focused on delegating work rather than containing algorithm details.
+This separation keeps UI concerns isolated from processing and data persistence.
 
 ## How It Works
 
@@ -60,22 +60,36 @@ The playback controls allow you to adjust speed, pause, advance, and rewind the 
 npm install
 ```
 
-2. Start the local server:
+2. Start the frontend (BrowserSync):
 
 ```bash
 npm run start
 ```
 
-3. Open the address provided by the server in your browser.
+3. In another terminal, start the API server:
+
+```bash
+npm run server
+```
+
+4. Open the frontend URL shown by BrowserSync (for example, http://localhost:3001).
 
 ## Project Structure
 
-- `index.html`: main application interface.
-- `style.css`: board, control panel, and statistics styles.
-- `src/client/main.js`: orchestrates the interface, animation, and algorithm interaction.
-- `src/controller/GenerationController.js`: thin controller that delegates the execution to the service.
-- `src/service/GenerationService.js`: contains the full genetic algorithm implementation.
-- `src/model/Chromosome.js`: represents each individual in the population.
+- `public/index.html`: main application interface.
+- `public/style.css`: board, control panel, and statistics styles.
+- `src/client/main.js`: orchestrates UI, animation, and API integration.
+- `src/client/view/BoardView.js`: board rendering and knight position updates.
+- `src/client/view/StatsView.js`: statistics, progress, and history table rendering.
+- `src/client/view/PlaybackControlsView.js`: playback and action button bindings.
+- `src/client/view/PopulationChartView.js`: population chart rendering.
+- `src/client/model/Score.js`: client-side score object used before persistence.
+- `src/server/server.ts`: HTTP API entrypoint.
+- `src/server/service/GenerationService.ts`: genetic algorithm processing.
+- `src/server/service/Score.ts`: SQLite persistence and score retrieval.
+- `src/server/model/Chromosome.ts`: chromosome domain model.
+- `src/server/model/Score.ts`: backend score model.
+- `src/server/controller/GenerationController.ts`: generation orchestration.
 
 ## Notes
 
