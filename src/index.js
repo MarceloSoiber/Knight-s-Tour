@@ -26,6 +26,7 @@ class KnightsTour {
         this.totalGenerations = 0;
         this.solution = [];
         this.currentConfig = null;
+        this.historyScores = [];
         this.pendingScore = null;
         this.isScoreSaved = false;
         this.deleteScoreTargetId = null;
@@ -66,6 +67,13 @@ class KnightsTour {
 
         if (this.statsView.scoresTableBodyEl) {
             this.statsView.scoresTableBodyEl.addEventListener('click', (event) => {
+                const applyButton = event.target.closest('.score-apply-btn');
+                if (applyButton) {
+                    const scoreId = Number(applyButton.dataset.scoreId);
+                    this.applyScoreFromHistory(scoreId);
+                    return;
+                }
+
                 const button = event.target.closest('.score-delete-btn');
                 if (!button) return;
 
@@ -423,12 +431,86 @@ class KnightsTour {
             }
 
             const rows = Array.isArray(payload.data) ? payload.data : [];
+            this.historyScores = rows;
             this.statsView.renderScoresTable(rows);
             this.statsView.setScoresStatus(`Total de registros: ${rows.length}`, 'success');
         } catch (error) {
+            this.historyScores = [];
             this.statsView.renderScoresTable([]);
             this.statsView.setScoresError(error instanceof Error ? error.message : 'Erro ao buscar histórico.');
         }
+    }
+
+    normalizeStoredSolution(rawSolution) {
+        if (!Array.isArray(rawSolution)) return [];
+
+        if (rawSolution.length === 0) return [];
+
+        // Suporta tanto formato coordenado [{row,col}] quanto sequencia [1..64].
+        if (typeof rawSolution[0] === 'number') {
+            return rawSolution
+                .map((position) => Number(position))
+                .filter((position) => Number.isInteger(position) && position > 0 && position <= this.boardSize * this.boardSize)
+                .map((position) => {
+                    const index = position - 1;
+                    return {
+                        row: Math.floor(index / this.boardSize),
+                        col: index % this.boardSize
+                    };
+                });
+        }
+
+        return rawSolution
+            .map((step) => ({
+                row: Number(step?.row),
+                col: Number(step?.col)
+            }))
+            .filter((step) => Number.isInteger(step.row)
+                && Number.isInteger(step.col)
+                && step.row >= 0
+                && step.row < this.boardSize
+                && step.col >= 0
+                && step.col < this.boardSize);
+    }
+
+    async applyScoreFromHistory(scoreId) {
+        if (this.isRunning) {
+            this.statsView.setScoresError('Aguarde o processamento atual finalizar para aplicar um score.');
+            return;
+        }
+
+        if (!Number.isInteger(scoreId) || scoreId <= 0) {
+            this.statsView.setScoresError('ID de score inválido.');
+            return;
+        }
+
+        const score = this.historyScores.find((item) => Number(item.id) === scoreId);
+        if (!score) {
+            this.statsView.setScoresError('Score não encontrado na lista atual.');
+            return;
+        }
+
+        const solution = this.normalizeStoredSolution(score.solucao);
+        if (solution.length === 0) {
+            this.statsView.setScoresError('Este score não possui uma solução válida para exibir.');
+            return;
+        }
+
+        this.stopAnimationPlayback(true);
+
+        this.solution = solution;
+        this.currentGeneration = Number(score.geracao) || 0;
+        this.bestFitness = Number(score.fitness) || 0;
+        this.avgFitness = Number(score.fitnessMedia) || 0;
+        this.totalGenerations = Number(score.generations) || Math.max(1, this.currentGeneration);
+
+        this.updateStats();
+        this.statsView.setProgress(this.currentGeneration, this.totalGenerations);
+        this.statsView.setSaveStatus('Score aplicado do histórico.', 'info');
+        this.statsView.setSaveEnabled(false);
+
+        await this.animateSolution();
+        this.statsView.setScoresStatus(`Score ${scoreId} aplicado ao tabuleiro.`, 'success');
     }
 
     promptRemoveScore(scoreId) {

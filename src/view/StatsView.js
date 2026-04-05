@@ -69,12 +69,26 @@ class StatsView {
             });
 
             const actionCell = document.createElement('td');
-            const actionButton = document.createElement('button');
-            actionButton.type = 'button';
-            actionButton.className = 'btn btn-sm btn-outline-danger score-delete-btn';
-            actionButton.dataset.scoreId = String(row.id);
-            actionButton.innerHTML = '<i class="bi bi-trash"></i>';
-            actionCell.appendChild(actionButton);
+            const actionGroup = document.createElement('div');
+            actionGroup.className = 'score-action-group';
+
+            const applyButton = document.createElement('button');
+            applyButton.type = 'button';
+            applyButton.className = 'btn btn-sm btn-outline-primary score-apply-btn';
+            applyButton.dataset.scoreId = String(row.id);
+            applyButton.innerHTML = '<i class="bi bi-play-circle"></i>';
+            applyButton.title = 'Aplicar score no tabuleiro';
+
+            const removeButton = document.createElement('button');
+            removeButton.type = 'button';
+            removeButton.className = 'btn btn-sm btn-outline-danger score-delete-btn';
+            removeButton.dataset.scoreId = String(row.id);
+            removeButton.innerHTML = '<i class="bi bi-trash"></i>';
+            removeButton.title = 'Remover score';
+
+            actionGroup.appendChild(applyButton);
+            actionGroup.appendChild(removeButton);
+            actionCell.appendChild(actionGroup);
             tr.appendChild(actionCell);
 
             this.scoresTableBodyEl.appendChild(tr);

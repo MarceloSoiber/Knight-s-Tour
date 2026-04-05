@@ -599,7 +599,7 @@ h1 {
 }
 
 .scores-table-wrap {
-    border: 1px solid #d7e6f3;
+    border: 1px solid #b8cfdd;
     border-radius: 10px;
     max-height: 300px;
     overflow: auto;
@@ -609,6 +609,9 @@ h1 {
 #scoresTable {
     font-size: 0.72rem;
     white-space: nowrap;
+    border-collapse: separate;
+    border-spacing: 0;
+    border: 1px solid #c9dce7;
 }
 
 #scoresTable thead th {
@@ -616,6 +619,27 @@ h1 {
     top: 0;
     z-index: 1;
     background: #f4f8fb;
+    text-align: center;
+    border-bottom: 1px solid #b8cfdd;
+    border-right: 1px solid #d7e6f0;
+}
+
+#scoresTable thead th:last-child {
+    border-right: none;
+}
+
+#scoresTable tbody td {
+    text-align: center;
+    border-right: 1px solid #e2edf4;
+    border-bottom: 1px solid #e2edf4;
+}
+
+#scoresTable tbody tr td:last-child {
+    border-right: none;
+}
+
+#scoresTable tbody tr:last-child td {
+    border-bottom: none;
 }
 
 #scoresTable tbody td:last-child,
@@ -625,6 +649,16 @@ h1 {
 
 .score-delete-btn {
     white-space: nowrap;
+}
+
+.score-action-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.score-action-group .btn {
+    padding: 0.2rem 0.42rem;
 }
 
 .score-modal {
