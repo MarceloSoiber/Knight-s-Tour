@@ -116,6 +116,14 @@ class KnightsTour {
     }
 
     async requestStop() {
+        if (this.isAnimatingPlayback) {
+            this.stopAnimationPlayback(true);
+            this.setAnimationControlsState(false);
+            this.statsView.setSaveStatus('Animacao interrompida pelo usuario.', 'warning');
+            this.controlsView.setStopEnabled(false);
+            return;
+        }
+
         if (!this.isRunning) return;
         this.stopRequested = true;
         this.controlsView.setStopEnabled(false);
@@ -127,6 +135,11 @@ class KnightsTour {
                 method: 'DELETE'
             });
             const payload = await response.json();
+
+            if (response.status === 409) {
+                this.statsView.setSaveStatus('Processamento ja finalizado. Nao ha execucao ativa para interromper.', 'info');
+                return;
+            }
 
             if (!response.ok || !payload.ok) {
                 throw new Error(payload.error || 'Falha ao solicitar interrupcao da geracao.');

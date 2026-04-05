@@ -88,9 +88,8 @@ class GenerationService {
 				break;
 			}
 
-			if (generation % 10 === 0) {
-				await this.sleep(0);
-			}
+			// Cede o event loop a cada iteracao para tornar o cancelamento mais responsivo.
+			await this.sleep(0);
 		}
 
 		this.ordenarPopulacao();
@@ -221,16 +220,29 @@ class GenerationService {
 	}
 
 	private mutacao(mutationRate: number, alteracoesPorIndividuo: number): void {
+		if (this.populacao.length === 0 || mutationRate <= 0 || alteracoesPorIndividuo <= 0) {
+			return;
+		}
+
 		const qtdMutacoes = Math.floor((this.populacao.length * mutationRate) / 100);
+		if (qtdMutacoes <= 0) {
+			return;
+		}
 
 		for (let i = 0; i < qtdMutacoes; i++) {
 			const indice = Math.floor(Math.random() * this.populacao.length);
 			const cromossomo = this.populacao[indice];
 			const genes = [...cromossomo.getSolucao()];
+			if (genes.length < 2) {
+				continue;
+			}
 
 			for (let j = 0; j < alteracoesPorIndividuo; j++) {
 				const a = Math.floor(Math.random() * this.totalCasas);
-				const b = Math.floor(Math.random() * this.totalCasas);
+				let b = Math.floor(Math.random() * this.totalCasas);
+				while (b === a) {
+					b = Math.floor(Math.random() * this.totalCasas);
+				}
 				[genes[a], genes[b]] = [genes[b], genes[a]];
 			}
 
@@ -260,8 +272,8 @@ class GenerationService {
 			} else if (cromossomo.getIdade() > 0) {
 				novaPopulacao.push(cromossomo);
 			}else{
-				cromossomo.setPontuacao(0);
-				novaPopulacao.push(cromossomo);
+				 //cromossomo.setPontuacao(0);
+				 //novaPopulacao.push(cromossomo);
 			}
 		}
 
