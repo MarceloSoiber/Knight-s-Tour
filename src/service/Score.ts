@@ -1,7 +1,7 @@
 import pkg from 'knex';
 const { knex } = pkg;
 import type { Knex } from 'knex';
-import ScoreModel from '../model/Score.js';
+import ScoreModel from '../model/Score.ts';
 
 export type ScoreInput = {
   fitness?: number;

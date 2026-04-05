@@ -7,7 +7,7 @@ import { ScoreService } from './service/Score.ts';
 import GenerationService from './service/GenerationService.ts';
 import type { GenerationConfig, GenerationResult } from './service/GenerationService.ts';
 
-import Score from './model/Score.js';
+import Score from './model/Score.ts';
 
 const PORT = Number(process.env.PORT) || 3333;
 const DB_PATH = process.env.SCORE_DB_PATH || './scores.db';
