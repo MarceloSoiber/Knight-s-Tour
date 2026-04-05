@@ -5,9 +5,9 @@
     "main": "index.js",
     "type": "module",
     "scripts": {
-        "start": "browser-sync --server --port 3000 --no-watch --no-ui --no-notify --no-open",
-        "dev": "browser-sync --server --port 3000 --no-watch --no-ui --no-notify --no-open",
-        "server": "node --experimental-strip-types src/server.ts",
+        "start": "browser-sync start --server --index public/index.html --port 3000 --no-watch --no-ui --no-notify --no-open",
+        "dev": "browser-sync start --server --index public/index.html --port 3000 --no-watch --no-ui --no-notify --no-open",
+        "server": "node --experimental-strip-types src/server/server.ts",
         "postinstall": "npm rebuild better-sqlite3",
         "test": "echo \"Error: no test specified\" && exit 1"
     },

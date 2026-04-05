@@ -1,6 +1,8 @@
 import { createServer } from 'node:http';
 import { URL } from 'node:url';
 import { randomUUID } from 'node:crypto';
+import { mkdirSync } from 'node:fs';
+import { dirname, isAbsolute, resolve } from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { ScoreInput } from './service/Score.ts';
 import { ScoreService } from './service/Score.ts';
@@ -10,8 +12,13 @@ import type { GenerationConfig, GenerationResult } from './service/GenerationSer
 import Score from './model/Score.ts';
 
 const PORT = Number(process.env.PORT) || 3333;
-const DB_PATH = process.env.SCORE_DB_PATH || './scores.db';
+const rawDbPath = process.env.SCORE_DB_PATH?.trim();
+const DB_PATH = rawDbPath
+  ? (isAbsolute(rawDbPath) ? rawDbPath : resolve(process.cwd(), rawDbPath))
+  : resolve(process.cwd(), 'data/scores.db');
 const JOB_TTL_MS = Number(process.env.GENERATION_JOB_TTL_MS) || 5 * 60 * 1000;
+
+mkdirSync(dirname(DB_PATH), { recursive: true });
 
 const scoreService = new ScoreService(DB_PATH, Score);
 const generationController = new GenerationService();

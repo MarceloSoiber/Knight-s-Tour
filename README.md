@@ -72,7 +72,7 @@ npm run start
 
 - `index.html`: main application interface.
 - `style.css`: board, control panel, and statistics styles.
-- `src/index.js`: orchestrates the interface, animation, and algorithm interaction.
+- `src/client/main.js`: orchestrates the interface, animation, and algorithm interaction.
 - `src/controller/GenerationController.js`: thin controller that delegates the execution to the service.
 - `src/service/GenerationService.js`: contains the full genetic algorithm implementation.
 - `src/model/Chromosome.js`: represents each individual in the population.
