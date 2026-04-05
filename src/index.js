@@ -1,13 +1,14 @@
 // Knight's Tour com Algoritmo Genético
 
-import GenerationController from './controller/GenerationController.js';
 import BoardView from './view/BoardView.js';
 import StatsView from './view/StatsView.js';
 import PlaybackControlsView from './view/PlaybackControlsView.js';
 import PopulationChartView from './view/PopulationChartView.js';
 import Score from './model/Score.js';
 
-const SCORE_API_URL = 'http://localhost:3333/api/scores';
+const API_BASE_URL = 'http://localhost:3333/api';
+const SCORE_API_URL = `${API_BASE_URL}/scores`;
+const GENERATION_JOBS_API_URL = `${API_BASE_URL}/generate/jobs`;
 
 class KnightsTour {
     constructor() {
@@ -30,8 +31,9 @@ class KnightsTour {
         this.pendingScore = null;
         this.isScoreSaved = false;
         this.deleteScoreTargetId = null;
+        this.currentJobId = null;
+        this.eventSource = null;
         this.animationSpeedPresets = [700, 450, 300, 150];
-        this.generationController = new GenerationController(this.boardSize);
         this.boardView = new BoardView(this.boardSize);
         this.statsView = new StatsView();
         this.populationChartView = new PopulationChartView();
@@ -113,10 +115,27 @@ class KnightsTour {
         this.controlsView.setStopEnabled(false);
     }
 
-    requestStop() {
+    async requestStop() {
         if (!this.isRunning) return;
         this.stopRequested = true;
         this.controlsView.setStopEnabled(false);
+
+        if (!this.currentJobId) return;
+
+        try {
+            const response = await fetch(`${GENERATION_JOBS_API_URL}/${this.currentJobId}`, {
+                method: 'DELETE'
+            });
+            const payload = await response.json();
+
+            if (!response.ok || !payload.ok) {
+                throw new Error(payload.error || 'Falha ao solicitar interrupcao da geracao.');
+            }
+
+            this.statsView.setSaveStatus('Solicitacao de parada enviada. Aguardando confirmacao do servidor...', 'warning');
+        } catch (error) {
+            this.statsView.setSaveStatus(error instanceof Error ? error.message : 'Erro ao solicitar parada.', 'danger');
+        }
     }
 
     syncAnimationSpeedFromSlider() {
@@ -160,38 +179,220 @@ class KnightsTour {
         this.statsView.setProgress(0, this.totalGenerations);
         this.statsView.showRunning();
 
-        const evolutionResult = await this.generationController.run(config, {
-            shouldStop: () => this.stopRequested,
-            onGeneration: (progress) => {
-                this.currentGeneration = progress.generation;
-                this.bestFitness = progress.bestFitness;
-                this.avgFitness = progress.avgFitness;
-                this.updateStats();
-                this.updateProgressBar();
-                this.updatePopulationChart(progress.chromosomeTotal);
+        try {
+            const job = await this.createGenerationJob(config);
+            this.currentJobId = job.id;
+
+            const finalJob = await this.waitForGenerationJobCompletion(job.id);
+
+            if (!finalJob.result) {
+                throw new Error('Job finalizado sem resultado da evolucao.');
             }
+
+            const evolutionResult = finalJob.result;
+            this.applyEvolutionResultStats(evolutionResult);
+            this.solution = evolutionResult.solution;
+            this.statsView.showEvolutionCompleted(evolutionResult.generationsExecuted, evolutionResult.bestFitness);
+            this.preparePendingScore(config, evolutionResult);
+
+            if (!evolutionResult.stopped) {
+                this.statsView.setSaveEnabled(true);
+                this.statsView.setSaveStatus('Processamento finalizado. Você já pode salvar os dados.', 'success');
+                await this.animateSolution();
+            } else {
+                this.statsView.setSaveEnabled(false);
+                this.statsView.setSaveStatus('Processamento interrompido. O salvamento foi desabilitado.', 'warning');
+            }
+        } catch (error) {
+            this.statsView.setSaveEnabled(false);
+            this.statsView.setSaveStatus(error instanceof Error ? error.message : 'Erro inesperado ao executar evolucao.', 'danger');
+        } finally {
+            this.closeJobEventSource();
+            this.currentJobId = null;
+            this.controlsView.setStartRunning(false);
+            this.controlsView.setStopEnabled(false);
+            this.isRunning = false;
+        }
+    }
+
+    async createGenerationJob(config) {
+        const response = await fetch(GENERATION_JOBS_API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(config)
         });
 
-        this.solution = evolutionResult.solution;
-        this.statsView.showEvolutionCompleted(evolutionResult.generationsExecuted, evolutionResult.bestFitness);
-        this.preparePendingScore(config, evolutionResult);
+        const payload = await response.json();
 
-        if (!evolutionResult.stopped) {
-            this.statsView.setSaveEnabled(true);
-            this.statsView.setSaveStatus('Processamento finalizado. Você já pode salvar os dados.', 'success');
+        if (!response.ok || !payload.ok || !payload.data?.id) {
+            throw new Error(payload.error || 'Falha ao iniciar processamento remoto.');
         }
-        
-        // Animar solução somente quando não houve parada manual
-        if (!evolutionResult.stopped) {
-            await this.animateSolution();
+
+        return payload.data;
+    }
+
+    waitForGenerationJobCompletion(jobId) {
+        return new Promise((resolve, reject) => {
+            this.closeJobEventSource();
+
+            const eventSource = new EventSource(`${GENERATION_JOBS_API_URL}/${jobId}/events`);
+            this.eventSource = eventSource;
+            let settled = false;
+            const pollIntervalMs = 600;
+            const pollTimer = setInterval(async () => {
+                if (settled) return;
+
+                const job = await this.fetchGenerationJobStatus(jobId);
+                if (!job) return;
+
+                applySnapshot(job);
+
+                if (job.status === 'completed' || job.status === 'stopped') {
+                    finish(resolve, job);
+                    return;
+                }
+
+                if (job.status === 'failed') {
+                    finishWithError(job.error || 'Job falhou durante o processamento.');
+                }
+            }, pollIntervalMs);
+
+            const finish = (handler, value) => {
+                if (settled) return;
+                settled = true;
+                clearInterval(pollTimer);
+                this.closeJobEventSource();
+                handler(value);
+            };
+
+            const finishWithError = (message) => {
+                finish(reject, new Error(message));
+            };
+
+            const parseEvent = (event) => {
+                try {
+                    return JSON.parse(event.data);
+                } catch {
+                    return null;
+                }
+            };
+
+            const applySnapshot = (job) => {
+                if (!job) return;
+
+                if (job.progress) {
+                    this.currentGeneration = Number(job.progress.generation) || 0;
+                    this.bestFitness = Number(job.progress.bestFitness) || 0;
+                    this.avgFitness = Number(job.progress.avgFitness) || 0;
+
+                    if (Number.isFinite(Number(job.progress.totalGenerations)) && Number(job.progress.totalGenerations) > 0) {
+                        this.totalGenerations = Number(job.progress.totalGenerations);
+                    }
+
+                    this.updateStats();
+                    this.updateProgressBar();
+                    this.updatePopulationChart(Number(job.progress.chromosomeTotal) || 0);
+                }
+
+                if (!job.progress && job.result) {
+                    this.applyEvolutionResultStats(job.result);
+                }
+            };
+
+            const resolveTerminal = (event) => {
+                const job = parseEvent(event);
+                if (!job) {
+                    finishWithError('Resposta invalida recebida do servidor.');
+                    return;
+                }
+
+                applySnapshot(job);
+                finish(resolve, job);
+            };
+
+            eventSource.addEventListener('snapshot', (event) => {
+                const job = parseEvent(event);
+                applySnapshot(job);
+
+                if (job?.status === 'completed' || job?.status === 'stopped') {
+                    finish(resolve, job);
+                    return;
+                }
+
+                if (job?.status === 'failed') {
+                    finishWithError(job.error || 'Job falhou durante o processamento.');
+                }
+            });
+
+            eventSource.addEventListener('progress', (event) => {
+                const job = parseEvent(event);
+                applySnapshot(job);
+            });
+
+            eventSource.addEventListener('completed', resolveTerminal);
+            eventSource.addEventListener('stopped', resolveTerminal);
+            eventSource.addEventListener('failed', (event) => {
+                const job = parseEvent(event);
+                finishWithError(job?.error || 'Job falhou durante o processamento.');
+            });
+
+            eventSource.onerror = async () => {
+                if (settled) return;
+
+                const job = await this.fetchGenerationJobStatus(jobId);
+                if (!job) return;
+
+                applySnapshot(job);
+
+                if (job.status === 'completed' || job.status === 'stopped') {
+                    finish(resolve, job);
+                    return;
+                }
+
+                if (job.status === 'failed') {
+                    finishWithError(job.error || 'Job falhou durante o processamento.');
+                }
+            };
+        });
+    }
+
+    async fetchGenerationJobStatus(jobId) {
+        try {
+            const response = await fetch(`${GENERATION_JOBS_API_URL}/${jobId}`);
+            const payload = await response.json();
+
+            if (!response.ok || !payload.ok || !payload.data) {
+                return null;
+            }
+
+            return payload.data;
+        } catch {
+            return null;
+        }
+    }
+
+    applyEvolutionResultStats(evolutionResult) {
+        this.currentGeneration = Number(evolutionResult?.generationsExecuted) || 0;
+        this.bestFitness = Number(evolutionResult?.bestFitness) || 0;
+        this.avgFitness = Number(evolutionResult?.avgFitness) || 0;
+
+        if (this.totalGenerations > 0) {
+            this.currentGeneration = Math.min(this.currentGeneration, this.totalGenerations);
         } else {
-            this.statsView.setSaveEnabled(false);
-            this.statsView.setSaveStatus('Processamento interrompido. O salvamento foi desabilitado.', 'warning');
+            this.totalGenerations = this.currentGeneration;
         }
-        
-        this.controlsView.setStartRunning(false);
-        this.controlsView.setStopEnabled(false);
-        this.isRunning = false;
+
+        this.updateStats();
+        this.updateProgressBar();
+    }
+
+    closeJobEventSource() {
+        if (!this.eventSource) return;
+
+        this.eventSource.close();
+        this.eventSource = null;
     }
 
     async animateSolution() {
@@ -583,6 +784,8 @@ class KnightsTour {
 
     reset() {
         this.stopAnimationPlayback(true);
+        this.closeJobEventSource();
+        this.currentJobId = null;
 
         this.currentGeneration = 0;
         this.bestFitness = 0;

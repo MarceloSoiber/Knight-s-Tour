@@ -183,7 +183,7 @@ class PopulationChartView {
         context.fillStyle = this.lineColor;
         context.fillRect(legendX, legendY, 10, 10);
         context.fillStyle = '#37474f';
-        context.fillText('Total de Cromossomos', legendX + 16, legendY + 5);
+        context.fillText('Total de Chromosomes', legendX + 16, legendY + 5);
     }
 }
 

@@ -75,7 +75,7 @@ npm run start
 - `src/index.js`: orchestrates the interface, animation, and algorithm interaction.
 - `src/controller/GenerationController.js`: thin controller that delegates the execution to the service.
 - `src/service/GenerationService.js`: contains the full genetic algorithm implementation.
-- `src/model/Cromossomo.js`: represents each individual in the population.
+- `src/model/Chromosome.js`: represents each individual in the population.
 
 ## Notes
 
