@@ -43,8 +43,9 @@ class GenerationService {
 	}
 
 	async run(config: Partial<GenerationConfig>, callbacks: GenerationCallbacks = {}): Promise<GenerationResult> {
+	
 		const cfg = this.normalizeConfig(config);
-		this.inicializarPopulacao(cfg.chromosomes, cfg.lifeExpectancy);
+		this.inicializarPopulacao(cfg.chromosomes, cfg.lifeExpectancy, cfg.activateLifeExpectancy);
 
 		let best = this.populacao[0];
 		let generation = 0;
@@ -94,6 +95,7 @@ class GenerationService {
 
 		this.ordenarPopulacao();
 		best = this.populacao[0];
+		
 		const validPath = this.extrairPercursoValido(best.getSolucao());
 
 		return {
@@ -119,7 +121,7 @@ class GenerationService {
 		};
 	}
 
-	private inicializarPopulacao(quantidade: number, lifeExpectancy: number): void {
+	private inicializarPopulacao(quantidade: number, lifeExpectancy: number, activateLifeExpectancy: boolean): void {
 		this.populacao = [];
 
 		for (let i = 0; i < quantidade; i++) {
@@ -130,31 +132,31 @@ class GenerationService {
 			this.populacao.push(cromossomo);
 		}
 
-		this.aplicarVida(lifeExpectancy, true);
+		this.aplicarVida(lifeExpectancy, activateLifeExpectancy);
 		this.ordenarPopulacao();
 	}
 
 	private criarGenesAleatorios(): number[] {
 		const genes = Array.from({ length: this.totalCasas }, (_, i) => i + 1);
-
+		
 		for (let i = genes.length - 1; i > 0; i--) {
 			const j = Math.floor(Math.random() * (i + 1));
 			[genes[i], genes[j]] = [genes[j], genes[i]];
 		}
-
 		return genes;
 	}
 
 	private gerarGeracaoElitista(cfg: GenerationConfig): void {
 		this.envelhecer(cfg.activateLifeExpectancy);
 
-		const qtdIndividuoCross = Math.max(2, Math.floor((cfg.crossoverRate * this.populacao.length) / 100));
+		const qtdIndividuoCross = Math.floor((cfg.crossoverRate * this.populacao.length) / 100);
 		const limite = qtdIndividuoCross % 2 === 0 ? qtdIndividuoCross : qtdIndividuoCross - 1;
 
 		for (let i = 0; i < limite - 1 && i + 1 < this.populacao.length; i += 2) {
 			const pai = this.populacao[i];
 			const mae = this.populacao[i + 1];
-			const [filho1, filho2] = this.gerarFilhos(pai, mae);
+			const pontoCorte = Math.floor(Math.random() * Math.max(1, this.totalCasas - 2));
+			const [filho1, filho2] = this.gerarFilhos(pai, mae, pontoCorte);
 			this.populacao.push(filho1, filho2);
 		}
 
@@ -166,19 +168,17 @@ class GenerationService {
 	private gerarGeracaoRoleta(cfg: GenerationConfig): void {
 		this.envelhecer(cfg.activateLifeExpectancy);
 
-		const qtdIndividuoCross = Math.max(2, Math.floor((cfg.crossoverRate * this.populacao.length) / 100));
+		const qtdIndividuoCross = Math.floor((cfg.crossoverRate * this.populacao.length) / 100);
 		const limite = qtdIndividuoCross % 2 === 0 ? qtdIndividuoCross : qtdIndividuoCross - 1;
 
 		for (let i = 0; i < limite; i += 2) {
 			const paiIndex = Math.floor(Math.random() * this.populacao.length);
-			let maeIndex = Math.floor(Math.random() * this.populacao.length);
-			if (maeIndex === paiIndex) {
-				maeIndex = (maeIndex + 1) % this.populacao.length;
-			}
+			const maeIndex = Math.floor(Math.random() * this.populacao.length);
 
 			const pai = this.populacao[paiIndex];
 			const mae = this.populacao[maeIndex];
-			const [filho1, filho2] = this.gerarFilhos(pai, mae);
+			const pontoCorte = Math.floor(Math.random() * Math.max(1, this.totalCasas));
+			const [filho1, filho2] = this.gerarFilhos(pai, mae, pontoCorte);
 			this.populacao.push(filho1, filho2);
 		}
 
@@ -187,19 +187,18 @@ class GenerationService {
 		this.aplicarVida(cfg.lifeExpectancy, cfg.activateLifeExpectancy);
 	}
 
-	private gerarFilhos(pai: Chromosome, mae: Chromosome): [Chromosome, Chromosome] {
-		const pontoCorte = Math.floor(Math.random() * (this.totalCasas - 2)) + 1;
+	private gerarFilhos(pai: Chromosome, mae: Chromosome, pontoCorte: number): [Chromosome, Chromosome] {
 		const genesPai = pai.getSolucao();
 		const genesMae = mae.getSolucao();
 
 		const genesFilho1 = this.cruzarGenes(genesPai, genesMae, pontoCorte);
 		const genesFilho2 = this.cruzarGenes(genesMae, genesPai, pontoCorte);
 
-		const filho1 = new Chromosome();
+		const filho1 = new Chromosome(-2);
 		filho1.setSolucao(genesFilho1);
 		filho1.setPontuacao(this.fitness(filho1));
 
-		const filho2 = new Chromosome();
+		const filho2 = new Chromosome(-2);
 		filho2.setSolucao(genesFilho2);
 		filho2.setPontuacao(this.fitness(filho2));
 
@@ -207,15 +206,16 @@ class GenerationService {
 	}
 
 	private cruzarGenes(primeiro: number[], segundo: number[], pontoCorte: number): number[] {
-		const inicio = primeiro.slice(0, pontoCorte);
-		const usados = new Set(inicio);
+		const corte = Math.max(0, Math.min(pontoCorte, primeiro.length));
+		const inicio = primeiro.slice(0, corte);
+		const usados = new Set<number>(inicio);
 		const resto = segundo.filter((gene) => !usados.has(gene));
 		return [...inicio, ...resto];
 	}
 
 	private selecaoIndividuo(selectionRate: number): void {
 		this.ordenarPopulacao();
-		const qtd = Math.max(2, Math.floor((this.populacao.length * selectionRate) / 100));
+		const qtd = Math.floor((this.populacao.length * selectionRate) / 100);
 		this.populacao = this.populacao.slice(0, Math.min(qtd, this.populacao.length));
 	}
 
@@ -224,7 +224,7 @@ class GenerationService {
 			return;
 		}
 
-		const qtdMutacoes = Math.floor((this.populacao.length * mutationRate) / 100);
+		const qtdMutacoes = Math.floor((mutationRate * 100) / this.populacao.length);
 		if (qtdMutacoes <= 0) {
 			return;
 		}
@@ -238,10 +238,11 @@ class GenerationService {
 			}
 
 			for (let j = 0; j < alteracoesPorIndividuo; j++) {
-				const a = Math.floor(Math.random() * this.totalCasas);
-				let b = Math.floor(Math.random() * this.totalCasas);
+				const limiteIndices = Math.max(1, this.totalCasas - 1);
+				const a = Math.floor(Math.random() * limiteIndices);
+				let b = Math.floor(Math.random() * limiteIndices);
 				while (b === a) {
-					b = Math.floor(Math.random() * this.totalCasas);
+					b = Math.floor(Math.random() * limiteIndices);
 				}
 				[genes[a], genes[b]] = [genes[b], genes[a]];
 			}
@@ -264,7 +265,7 @@ class GenerationService {
 	private aplicarVida(lifeExpectancy: number, ativado: boolean): void {
 		if (!ativado) return;
 
-		const novaPopulacao = [];
+		const novaPopulacao: Chromosome[] = [];
 		for (const cromossomo of this.populacao) {
 			if (cromossomo.getIdade() === -2) {
 				cromossomo.setIdade(lifeExpectancy);
@@ -272,33 +273,27 @@ class GenerationService {
 			} else if (cromossomo.getIdade() > 0) {
 				novaPopulacao.push(cromossomo);
 			}else{
-				 cromossomo.setPontuacao(0);
-				 novaPopulacao.push(cromossomo);
+				// cromossomo.setPontuacao(0);
+				// novaPopulacao.push(cromossomo);
 			}
 		}
 
 		this.populacao = novaPopulacao;
-
-		while (this.populacao.length < 2) {
-			const genes = this.criarGenesAleatorios();
-			const c = new Chromosome(lifeExpectancy);
-			c.setSolucao(genes);
-			c.setPontuacao(this.fitness(c));
-			this.populacao.push(c);
-		}
 	}
 
 	private fitness(cromossomo: Chromosome): number {
 		const genes = cromossomo.getSolucao();
 		if (!genes || genes.length === 0) return 0;
 
-		let total = 1;
+		let total = 0;
 		for (let i = 1; i < genes.length; i++) {
-			if (!this.movimentoCavaloValido(genes[i - 1], genes[i])) {
-				break;
+			if (this.movimentoCavaloValido(genes[i - 1], genes[i])) {
+				total += 1;
 			}
-			total += 1;
 		}
+
+		// Replica a regra do Java, que sempre soma 1 ao ultimo elemento.
+		total += 1;
 
 		return total;
 	}
