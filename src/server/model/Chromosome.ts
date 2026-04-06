@@ -1,74 +1,74 @@
 class Chromosome {
-    private solucao: number[];
-    private pontuacao: number;
-    private idade: number;
+    private solution: number[];
+    private score: number;
+    private age: number;
 
-    constructor(idade: number = -2) {
-        this.solucao = [];
-        this.pontuacao = 0;
-        this.idade = idade;
+    constructor(age: number = -2) {
+        this.solution = [];
+        this.score = 0;
+        this.age = age;
     }
 
-    getSolucao(): number[] {
-        return this.solucao;
+    getSolution(): number[] {
+        return this.solution;
     }
 
-    setSolucao(solucao: number[]): void {
-        if (Array.isArray(solucao)) {
-            this.solucao = solucao;
+    setSolution(solution: number[]): void {
+        if (Array.isArray(solution)) {
+            this.solution = solution;
         } else {
             throw new Error('Solution must be an array');
         }
     }
 
-    getPontuacao(): number {
-        return this.pontuacao;
+    getScore(): number {
+        return this.score;
     }
 
-    setPontuacao(pontuacao: number): void {
-        if (typeof pontuacao === 'number') {
-            this.pontuacao = pontuacao;
+    setScore(score: number): void {
+        if (typeof score === 'number') {
+            this.score = score;
         } else {
             throw new Error('Score must be a number');
         }
     }
 
-    getIdade(): number {
-        return this.idade;
+    getAge(): number {
+        return this.age;
     }
 
-    setIdade(idade: number): void {
-        if (typeof idade === 'number') {
-            this.idade = idade;
+    setAge(age: number): void {
+        if (typeof age === 'number') {
+            this.age = age;
         } else {
             throw new Error('Age must be a number');
         }
     }
 
-    envelhecer(): void {
-        this.idade++;
+    ageUp(): void {
+        this.age++;
     }
 
     clone(): Chromosome {
-        const clone = new Chromosome(this.idade);
-        clone.setSolucao([...this.solucao]);
-        clone.setPontuacao(this.pontuacao);
+        const clone = new Chromosome(this.age);
+        clone.setSolution([...this.solution]);
+        clone.setScore(this.score);
         return clone;
     }
 
-    compareTo(outro: Chromosome): number {
-        return outro.getPontuacao() - this.getPontuacao();
+    compareTo(other: Chromosome): number {
+        return other.getScore() - this.getScore();
     }
 
     toString(): string {
-        return `Chromosome {solucao: [${this.solucao.join(', ')}], pontuacao: ${this.pontuacao}, idade: ${this.idade}}`;
+        return `Chromosome {solution: [${this.solution.join(', ')}], score: ${this.score}, age: ${this.age}}`;
     }
 
-    toJSON(): { solucao: number[]; pontuacao: number; idade: number } {
+    toJSON(): { solution: number[]; score: number; age: number } {
         return {
-            solucao: this.solucao,
-            pontuacao: this.pontuacao,
-            idade: this.idade
+            solution: this.solution,
+            score: this.score,
+            age: this.age
         };
     }
 }

@@ -253,7 +253,7 @@ class KnightsTour {
             const eventSource = new EventSource(`${GENERATION_JOBS_API_URL}/${jobId}/events`);
             this.eventSource = eventSource;
             let settled = false;
-            const pollIntervalMs = 600;
+            const pollIntervalMs = 120;
             const pollTimer = setInterval(async () => {
                 if (settled) return;
 
