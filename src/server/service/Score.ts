@@ -5,9 +5,9 @@ import ScoreModel from '../model/Score.ts';
 
 export type ScoreInput = {
   fitness?: number;
-  fitnessMedia?: number;
-  geracao?: number;
-  solucao?: unknown[];
+  averageFitness?: number;
+  generation?: number;
+  solution?: unknown[];
   generations?: number;
   chromosomes?: number;
   selectionRate?: number;
@@ -17,16 +17,16 @@ export type ScoreInput = {
   lifeExpectancy?: number;
   activateLifeExpectancy?: boolean;
   processingOption?: string;
-  criadoEm?: string;
+  createdAt?: string;
 };
 
 export type StoredScore = {
   id: number;
   fitness: number;
-  fitnessMedia: number;
-  geracao: number;
-  criadoEm: string;
-  solucao: unknown[];
+  averageFitness: number;
+  generation: number;
+  createdAt: string;
+  solution: unknown[];
   generations: number;
   chromosomes: number;
   selectionRate: number;
@@ -41,10 +41,10 @@ export type StoredScore = {
 type ScoreClass = new (configForm?: Record<string, unknown>) => {
   setId?: (id: number | null) => void;
   setFitness?: (fitness: number) => void;
-  setFitnessMedia?: (fitnessMedia: number) => void;
-  setGeracao?: (geracao: number) => void;
-  setCriadoEm?: (criadoEm: string | Date) => void;
-  setSolucao?: (solucao: unknown[]) => void;
+  setAverageFitness?: (averageFitness: number) => void;
+  setGeneration?: (generation: number) => void;
+  setCreatedAt?: (createdAt: string | Date) => void;
+  setSolution?: (solution: unknown[]) => void;
   setGenerations?: (generations: number) => void;
   setChromosomes?: (chromosomes: number) => void;
   setSelectionRate?: (selectionRate: number) => void;
@@ -72,7 +72,23 @@ function nowAtMinusThreeIso(): string {
   return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.${milliseconds}-03:00`;
 }
 
-type StoredScoreRow = Omit<StoredScore, 'solucao'> & { solucao: string };
+type StoredScoreDbRow = {
+  id: number;
+  fitness: number;
+  averageFitness: number;
+  generation: number;
+  createdAt: string;
+  solution: string;
+  generations: number;
+  chromosomes: number;
+  selectionRate: number;
+  crossoverRate: number;
+  mutationRate: number;
+  seriesPerMutation: number;
+  lifeExpectancy: number;
+  activateLifeExpectancy: number;
+  processingOption: string;
+};
 
 function parseStoredSolution(raw: string | null | undefined): unknown[] {
   if (!raw) return [];
@@ -102,15 +118,15 @@ export class ScoreService {
     });
   }
 
-  private hydrateScore(row: StoredScoreRow) {
+  private hydrateScore(row: StoredScoreDbRow) {
     const score = new this.ScoreClass();
 
     score.setId?.(row.id);
     score.setFitness?.(row.fitness);
-    score.setFitnessMedia?.(row.fitnessMedia);
-    score.setGeracao?.(row.geracao);
-    score.setCriadoEm?.(row.criadoEm);
-    score.setSolucao?.(parseStoredSolution(row.solucao));
+    score.setAverageFitness?.(row.averageFitness);
+    score.setGeneration?.(row.generation);
+    score.setCreatedAt?.(row.createdAt);
+    score.setSolution?.(parseStoredSolution(row.solution));
     score.setGenerations?.(row.generations);
     score.setChromosomes?.(row.chromosomes);
     score.setSelectionRate?.(row.selectionRate);
@@ -124,6 +140,24 @@ export class ScoreService {
     return score;
   }
 
+  private async renameColumnIfNeeded(tableName: string, oldName: string, newName: string): Promise<void> {
+    const hasOld = await this.db.schema.hasColumn(tableName, oldName);
+    const hasNew = await this.db.schema.hasColumn(tableName, newName);
+
+    if (hasOld && !hasNew) {
+      await this.db.schema.alterTable(tableName, (table) => {
+        table.renameColumn(oldName, newName);
+      });
+    }
+  }
+
+  private async migrateLegacyColumns(): Promise<void> {
+    await this.renameColumnIfNeeded('scores', 'fitnessMedia', 'averageFitness');
+    await this.renameColumnIfNeeded('scores', 'geracao', 'generation');
+    await this.renameColumnIfNeeded('scores', 'criadoEm', 'createdAt');
+    await this.renameColumnIfNeeded('scores', 'solucao', 'solution');
+  }
+
   async setup(): Promise<void> {
     if (this.isSetup) return;
 
@@ -132,10 +166,10 @@ export class ScoreService {
       await this.db.schema.createTable('scores', (table) => {
         table.increments('id').primary();
         table.float('fitness').notNullable().defaultTo(0);
-        table.float('fitnessMedia').notNullable().defaultTo(0);
-        table.integer('geracao').notNullable().defaultTo(0);
-        table.text('criadoEm').notNullable();
-        table.text('solucao').notNullable().defaultTo('[]');
+        table.float('averageFitness').notNullable().defaultTo(0);
+        table.integer('generation').notNullable().defaultTo(0);
+        table.text('createdAt').notNullable();
+        table.text('solution').notNullable().defaultTo('[]');
 
         table.integer('generations').notNullable().defaultTo(0);
         table.integer('chromosomes').notNullable().defaultTo(0);
@@ -148,10 +182,12 @@ export class ScoreService {
         table.string('processingOption').notNullable().defaultTo('rotation');
       });
     } else {
-      const hasSolucao = await this.db.schema.hasColumn('scores', 'solucao');
-      if (!hasSolucao) {
+      await this.migrateLegacyColumns();
+
+      const hasSolution = await this.db.schema.hasColumn('scores', 'solution');
+      if (!hasSolution) {
         await this.db.schema.alterTable('scores', (table) => {
-          table.text('solucao').notNullable().defaultTo('[]');
+          table.text('solution').notNullable().defaultTo('[]');
         });
       }
     }
@@ -162,12 +198,13 @@ export class ScoreService {
   async saveScore(input: ScoreInput): Promise<StoredScore> {
     await this.setup();
 
+    const legacyInput = input as Record<string, unknown>;
     const row = {
       fitness: Number(input.fitness) || 0,
-      fitnessMedia: Number(input.fitnessMedia) || 0,
-      geracao: Number(input.geracao) || 0,
-      criadoEm: input.criadoEm || nowAtMinusThreeIso(),
-      solucao: JSON.stringify(Array.isArray(input.solucao) ? input.solucao : []),
+      averageFitness: Number(input.averageFitness ?? legacyInput.fitnessMedia) || 0,
+      generation: Number(input.generation ?? legacyInput.geracao) || 0,
+      createdAt: String(input.createdAt ?? legacyInput.criadoEm ?? nowAtMinusThreeIso()),
+      solution: JSON.stringify(Array.isArray(input.solution ?? legacyInput.solucao) ? (input.solution ?? legacyInput.solucao) : []),
       generations: Number(input.generations) || 0,
       chromosomes: Number(input.chromosomes) || 0,
       selectionRate: Number(input.selectionRate) || 0,
@@ -182,9 +219,9 @@ export class ScoreService {
     const inserted = await this.db('scores').insert(row);
     const insertedId = Array.isArray(inserted) ? Number(inserted[0]) : Number(inserted);
 
-    const saved = await this.db<StoredScoreRow>('scores').where({ id: insertedId }).first();
+    const saved = await this.db<StoredScoreDbRow>('scores').where({ id: insertedId }).first();
     if (!saved) {
-      throw new Error('Falha ao recuperar score salvo.');
+      throw new Error('Failed to retrieve saved score.');
     }
 
     return this.hydrateScore(saved) as unknown as StoredScore;
@@ -201,7 +238,7 @@ export class ScoreService {
     await this.setup();
 
     const safeLimit = Number.isFinite(limit) ? Math.max(1, Math.min(500, Math.floor(limit))) : 50;
-    const rows = await this.db<StoredScoreRow>('scores').select('*').orderBy('id', 'desc').limit(safeLimit);
+    const rows = await this.db<StoredScoreDbRow>('scores').select('*').orderBy('id', 'desc').limit(safeLimit);
     return rows.map((row) => this.hydrateScore(row) as unknown as StoredScore);
   }
 

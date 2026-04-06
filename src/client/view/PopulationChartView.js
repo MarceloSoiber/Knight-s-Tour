@@ -97,7 +97,7 @@ class PopulationChartView {
         context.font = '600 14px Segoe UI, Tahoma, Geneva, Verdana, sans-serif';
         context.textAlign = 'center';
         context.textBaseline = 'middle';
-        context.fillText('Aguardando início da evolução...', width / 2, height / 2);
+        context.fillText('Waiting for evolution to start...', width / 2, height / 2);
     }
 
     drawGrid(context, padding, chartWidth, chartHeight) {
@@ -139,7 +139,7 @@ class PopulationChartView {
         context.textBaseline = 'top';
         context.fillText(String(minGeneration), padding.left, padding.top + chartHeight + 6);
         context.fillText(String(maxGeneration), padding.left + chartWidth, padding.top + chartHeight + 6);
-        context.fillText('Geração', padding.left + chartWidth / 2, padding.top + chartHeight + 16);
+        context.fillText('Generation', padding.left + chartWidth / 2, padding.top + chartHeight + 16);
     }
 
     drawChromosomeSeries(context, padding, chartWidth, chartHeight, yMax, minGeneration, maxGeneration) {
@@ -183,7 +183,7 @@ class PopulationChartView {
         context.fillStyle = this.lineColor;
         context.fillRect(legendX, legendY, 10, 10);
         context.fillStyle = '#37474f';
-        context.fillText('Total de Chromosomes', legendX + 16, legendY + 5);
+        context.fillText('Total Chromosomes', legendX + 16, legendY + 5);
     }
 }
 

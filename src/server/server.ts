@@ -138,7 +138,7 @@ async function runGenerationJob(job: GenerationJob): Promise<void> {
   } catch (error) {
     updateJob(job, {
       status: 'failed',
-      error: error instanceof Error ? error.message : 'Erro inesperado ao processar geracao.',
+      error: error instanceof Error ? error.message : 'Unexpected error while processing generation.',
     });
     broadcastJobEvent(job, 'failed');
   } finally {
@@ -205,7 +205,7 @@ function readJsonBody(req: IncomingMessage): Promise<unknown> {
       raw += chunk;
 
       if (raw.length > 1_000_000) {
-        reject(new Error('Payload muito grande.'));
+        reject(new Error('Payload is too large.'));
       }
     });
 
@@ -218,7 +218,7 @@ function readJsonBody(req: IncomingMessage): Promise<unknown> {
       try {
         resolve(JSON.parse(raw));
       } catch {
-        reject(new Error('JSON invalido.'));
+        reject(new Error('Invalid JSON.'));
       }
     });
 
@@ -267,7 +267,7 @@ const server = createServer(async (req, res) => {
       const job = getJobFromPath(url.pathname);
 
       if (!job) {
-        writeJson(res, 404, { ok: false, error: 'Job nao encontrado.' });
+        writeJson(res, 404, { ok: false, error: 'Job not found.' });
         return;
       }
 
@@ -279,7 +279,7 @@ const server = createServer(async (req, res) => {
       const job = getJobFromPath(url.pathname);
 
       if (!job) {
-        writeJson(res, 404, { ok: false, error: 'Job nao encontrado.' });
+        writeJson(res, 404, { ok: false, error: 'Job not found.' });
         return;
       }
 
@@ -305,12 +305,12 @@ const server = createServer(async (req, res) => {
       const job = getJobFromPath(url.pathname);
 
       if (!job) {
-        writeJson(res, 404, { ok: false, error: 'Job nao encontrado.' });
+        writeJson(res, 404, { ok: false, error: 'Job not found.' });
         return;
       }
 
       if (isTerminalJobStatus(job.status)) {
-        writeJson(res, 409, { ok: false, error: 'Job ja finalizado.', data: toJobPayload(job) });
+        writeJson(res, 409, { ok: false, error: 'Job already finished.', data: toJobPayload(job) });
         return;
       }
 
@@ -324,13 +324,13 @@ const server = createServer(async (req, res) => {
       const id = Number(url.pathname.split('/').pop());
 
       if (!Number.isInteger(id) || id <= 0) {
-        writeJson(res, 400, { ok: false, error: 'ID invalido.' });
+        writeJson(res, 400, { ok: false, error: 'Invalid ID.' });
         return;
       }
 
       const deleted = await scoreService.deleteScore(id);
       if (!deleted) {
-        writeJson(res, 404, { ok: false, error: 'Score nao encontrado.' });
+        writeJson(res, 404, { ok: false, error: 'Score not found.' });
         return;
       }
 
@@ -338,11 +338,11 @@ const server = createServer(async (req, res) => {
       return;
     }
 
-    writeJson(res, 404, { ok: false, error: 'Rota nao encontrada.' });
+    writeJson(res, 404, { ok: false, error: 'Route not found.' });
   } catch (error) {
     writeJson(res, 400, {
       ok: false,
-      error: error instanceof Error ? error.message : 'Erro inesperado.',
+      error: error instanceof Error ? error.message : 'Unexpected error.',
     });
   }
 });
@@ -351,12 +351,12 @@ async function start() {
   await scoreService.setup();
 
   server.listen(PORT, () => {
-    console.log(`Score API executando em http://localhost:${PORT}`);
+    console.log(`Score API running at http://localhost:${PORT}`);
   });
 }
 
 start().catch((error) => {
-  console.error('Falha ao iniciar servidor:', error);
+  console.error('Failed to start server:', error);
   process.exit(1);
 });
 

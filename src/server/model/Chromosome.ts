@@ -17,7 +17,7 @@ class Chromosome {
         if (Array.isArray(solucao)) {
             this.solucao = solucao;
         } else {
-            throw new Error('Solução deve ser um array');
+            throw new Error('Solution must be an array');
         }
     }
 
@@ -29,7 +29,7 @@ class Chromosome {
         if (typeof pontuacao === 'number') {
             this.pontuacao = pontuacao;
         } else {
-            throw new Error('Pontuação deve ser um número');
+            throw new Error('Score must be a number');
         }
     }
 
@@ -41,7 +41,7 @@ class Chromosome {
         if (typeof idade === 'number') {
             this.idade = idade;
         } else {
-            throw new Error('Idade deve ser um número');
+            throw new Error('Age must be a number');
         }
     }
 

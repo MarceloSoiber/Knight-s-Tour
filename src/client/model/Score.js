@@ -1,17 +1,17 @@
 /**
- * Classe Score
- * Representa um score no algoritmo genetico do Knight's Tour para fins de analise e comparacao de solucoes
+ * Score model
+ * Represents a Knight's Tour genetic algorithm run score for analysis and comparison.
  */
 class Score {
     constructor(configForm = {}) {
         this.id = null;
         this.fitness = 0;
-        this.fitnessMedia = 0;
-        this.geracao = 0;
-        this.criadoEm = new Date();
-        this.solucao = [];
+        this.averageFitness = 0;
+        this.generation = 0;
+        this.createdAt = new Date();
+        this.solution = [];
 
-        // Campos de configuracao da execucao
+        // Execution configuration fields
         this.generations = Number(configForm.generations) || 0;
         this.chromosomes = Number(configForm.chromosomes) || 0;
         this.selectionRate = Number(configForm.selectionRate) || 0;
@@ -39,36 +39,36 @@ class Score {
         this.fitness = Number(fitness) || 0;
     }
 
-    getFitnessMedia() {
-        return this.fitnessMedia;
+    getAverageFitness() {
+        return this.averageFitness;
     }
 
-    setFitnessMedia(fitnessMedia) {
-        this.fitnessMedia = Number(fitnessMedia) || 0;
+    setAverageFitness(averageFitness) {
+        this.averageFitness = Number(averageFitness) || 0;
     }
 
-    getGeracao() {
-        return this.geracao;
+    getGeneration() {
+        return this.generation;
     }
 
-    setGeracao(geracao) {
-        this.geracao = Number(geracao) || 0;
+    setGeneration(generation) {
+        this.generation = Number(generation) || 0;
     }
 
-    getCriadoEm() {
-        return this.criadoEm;
+    getCreatedAt() {
+        return this.createdAt;
     }
 
-    setCriadoEm(criadoEm) {
-        this.criadoEm = criadoEm instanceof Date ? criadoEm : new Date(criadoEm);
+    setCreatedAt(createdAt) {
+        this.createdAt = createdAt instanceof Date ? createdAt : new Date(createdAt);
     }
 
-    getSolucao() {
-        return this.solucao;
+    getSolution() {
+        return this.solution;
     }
 
-    setSolucao(solucao) {
-        this.solucao = Array.isArray(solucao) ? solucao : [];
+    setSolution(solution) {
+        this.solution = Array.isArray(solution) ? solution : [];
     }
 
     getGenerations() {
@@ -147,10 +147,10 @@ class Score {
         return {
             id: this.id,
             fitness: this.fitness,
-            fitnessMedia: this.fitnessMedia,
-            geracao: this.geracao,
-            criadoEm: this.criadoEm,
-            solucao: this.solucao,
+            averageFitness: this.averageFitness,
+            generation: this.generation,
+            createdAt: this.createdAt,
+            solution: this.solution,
             generations: this.generations,
             chromosomes: this.chromosomes,
             selectionRate: this.selectionRate,

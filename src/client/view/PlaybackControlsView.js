@@ -29,8 +29,8 @@ class PlaybackControlsView {
 
         this.startBtn.disabled = isRunning;
         this.startBtn.innerHTML = isRunning
-            ? '<i class="bi bi-hourglass-split"></i> Rodando'
-            : '<i class="bi bi-play-circle"></i> Iniciar';
+            ? '<i class="bi bi-hourglass-split"></i> Running'
+            : '<i class="bi bi-play-circle"></i> Start';
     }
 
     setStopEnabled(enabled) {
@@ -49,9 +49,9 @@ class PlaybackControlsView {
         if (!this.pauseBtn) return;
 
         if (isPaused) {
-            this.pauseBtn.innerHTML = '<i class="bi bi-play-fill"></i> Continuar';
+            this.pauseBtn.innerHTML = '<i class="bi bi-play-fill"></i> Resume';
         } else {
-            this.pauseBtn.innerHTML = '<i class="bi bi-pause-fill"></i> Pausar';
+            this.pauseBtn.innerHTML = '<i class="bi bi-pause-fill"></i> Pause';
         }
     }
 }

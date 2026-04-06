@@ -272,8 +272,8 @@ class GenerationService {
 			} else if (cromossomo.getIdade() > 0) {
 				novaPopulacao.push(cromossomo);
 			}else{
-				 //cromossomo.setPontuacao(0);
-				 //novaPopulacao.push(cromossomo);
+				 cromossomo.setPontuacao(0);
+				 novaPopulacao.push(cromossomo);
 			}
 		}
 

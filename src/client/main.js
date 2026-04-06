@@ -1,4 +1,4 @@
-// Knight's Tour com Algoritmo Genético
+// Knight's Tour with Genetic Algorithm
 
 import BoardView from './view/BoardView.js';
 import StatsView from './view/StatsView.js';
@@ -119,7 +119,7 @@ class KnightsTour {
         if (this.isAnimatingPlayback) {
             this.stopAnimationPlayback(true);
             this.setAnimationControlsState(false);
-            this.statsView.setSaveStatus('Animacao interrompida pelo usuario.', 'warning');
+            this.statsView.setSaveStatus('Animation stopped by user.', 'warning');
             this.controlsView.setStopEnabled(false);
             return;
         }
@@ -137,17 +137,17 @@ class KnightsTour {
             const payload = await response.json();
 
             if (response.status === 409) {
-                this.statsView.setSaveStatus('Processamento ja finalizado. Nao ha execucao ativa para interromper.', 'info');
+                this.statsView.setSaveStatus('Processing has already finished. There is no active execution to stop.', 'info');
                 return;
             }
 
             if (!response.ok || !payload.ok) {
-                throw new Error(payload.error || 'Falha ao solicitar interrupcao da geracao.');
+                throw new Error(payload.error || 'Failed to request generation stop.');
             }
 
-            this.statsView.setSaveStatus('Solicitacao de parada enviada. Aguardando confirmacao do servidor...', 'warning');
+            this.statsView.setSaveStatus('Stop request sent. Waiting for server confirmation...', 'warning');
         } catch (error) {
-            this.statsView.setSaveStatus(error instanceof Error ? error.message : 'Erro ao solicitar parada.', 'danger');
+            this.statsView.setSaveStatus(error instanceof Error ? error.message : 'Error while requesting stop.', 'danger');
         }
     }
 
@@ -185,7 +185,7 @@ class KnightsTour {
         this.controlsView.setStartRunning(true);
         this.controlsView.setStopEnabled(true);
         this.statsView.resetSaveButton();
-        this.statsView.setSaveStatus('O salvamento será liberado ao final do processamento.');
+        this.statsView.setSaveStatus('Saving will be enabled when processing finishes.');
         
         this.totalGenerations = config.generations;
         this.statsView.resetProgress();
@@ -199,7 +199,7 @@ class KnightsTour {
             const finalJob = await this.waitForGenerationJobCompletion(job.id);
 
             if (!finalJob.result) {
-                throw new Error('Job finalizado sem resultado da evolucao.');
+                throw new Error('Job finished without an evolution result.');
             }
 
             const evolutionResult = finalJob.result;
@@ -210,15 +210,15 @@ class KnightsTour {
 
             if (!evolutionResult.stopped) {
                 this.statsView.setSaveEnabled(true);
-                this.statsView.setSaveStatus('Processamento finalizado. Você já pode salvar os dados.', 'success');
+                this.statsView.setSaveStatus('Processing finished. You can now save the data.', 'success');
                 await this.animateSolution();
             } else {
                 this.statsView.setSaveEnabled(false);
-                this.statsView.setSaveStatus('Processamento interrompido. O salvamento foi desabilitado.', 'warning');
+                this.statsView.setSaveStatus('Processing stopped. Saving has been disabled.', 'warning');
             }
         } catch (error) {
             this.statsView.setSaveEnabled(false);
-            this.statsView.setSaveStatus(error instanceof Error ? error.message : 'Erro inesperado ao executar evolucao.', 'danger');
+            this.statsView.setSaveStatus(error instanceof Error ? error.message : 'Unexpected error while running evolution.', 'danger');
         } finally {
             this.closeJobEventSource();
             this.currentJobId = null;
@@ -240,7 +240,7 @@ class KnightsTour {
         const payload = await response.json();
 
         if (!response.ok || !payload.ok || !payload.data?.id) {
-            throw new Error(payload.error || 'Falha ao iniciar processamento remoto.');
+            throw new Error(payload.error || 'Failed to start remote processing.');
         }
 
         return payload.data;
@@ -268,7 +268,7 @@ class KnightsTour {
                 }
 
                 if (job.status === 'failed') {
-                    finishWithError(job.error || 'Job falhou durante o processamento.');
+                    finishWithError(job.error || 'Job failed during processing.');
                 }
             }, pollIntervalMs);
 
@@ -317,7 +317,7 @@ class KnightsTour {
             const resolveTerminal = (event) => {
                 const job = parseEvent(event);
                 if (!job) {
-                    finishWithError('Resposta invalida recebida do servidor.');
+                    finishWithError('Invalid response received from server.');
                     return;
                 }
 
@@ -335,7 +335,7 @@ class KnightsTour {
                 }
 
                 if (job?.status === 'failed') {
-                    finishWithError(job.error || 'Job falhou durante o processamento.');
+                    finishWithError(job.error || 'Job failed during processing.');
                 }
             });
 
@@ -348,7 +348,7 @@ class KnightsTour {
             eventSource.addEventListener('stopped', resolveTerminal);
             eventSource.addEventListener('failed', (event) => {
                 const job = parseEvent(event);
-                finishWithError(job?.error || 'Job falhou durante o processamento.');
+                finishWithError(job?.error || 'Job failed during processing.');
             });
 
             eventSource.onerror = async () => {
@@ -365,7 +365,7 @@ class KnightsTour {
                 }
 
                 if (job.status === 'failed') {
-                    finishWithError(job.error || 'Job falhou durante o processamento.');
+                    finishWithError(job.error || 'Job failed during processing.');
                 }
             };
         });
@@ -581,10 +581,10 @@ class KnightsTour {
     preparePendingScore(config, evolutionResult) {
         const score = new Score(config);
         score.setFitness(evolutionResult.bestFitness);
-        score.setFitnessMedia(evolutionResult.avgFitness);
-        score.setGeracao(evolutionResult.generationsExecuted);
-        score.setCriadoEm(new Date());
-        score.setSolucao(evolutionResult.solution);
+        score.setAverageFitness(evolutionResult.avgFitness);
+        score.setGeneration(evolutionResult.generationsExecuted);
+        score.setCreatedAt(new Date());
+        score.setSolution(evolutionResult.solution);
 
         this.pendingScore = score;
         return score;
@@ -597,12 +597,12 @@ class KnightsTour {
         }
 
         if (!this.pendingScore) {
-            this.statsView.setSaveStatus('Execute o processamento até o final antes de salvar.', 'warning');
+            this.statsView.setSaveStatus('Run processing to completion before saving.', 'warning');
             return;
         }
 
         this.statsView.setSaveLoading(true);
-        this.statsView.setSaveStatus('Enviando dados para o servidor...', 'primary');
+        this.statsView.setSaveStatus('Sending data to the server...', 'primary');
 
         try {
             const response = await fetch(SCORE_API_URL, {
@@ -616,15 +616,15 @@ class KnightsTour {
             const payload = await response.json();
 
             if (!response.ok || !payload.ok) {
-                throw new Error(payload.error || 'Falha ao salvar o score.');
+                throw new Error(payload.error || 'Failed to save score.');
             }
 
-            this.statsView.setSaveStatus('Dados salvos com sucesso no SQLite.', 'success');
+            this.statsView.setSaveStatus('Data saved successfully to SQLite.', 'success');
             this.statsView.setSaveCompleted();
             this.isScoreSaved = true;
             await this.loadScoresFromDatabase();
         } catch (error) {
-            this.statsView.setSaveStatus(error instanceof Error ? error.message : 'Erro inesperado ao salvar.', 'danger');
+            this.statsView.setSaveStatus(error instanceof Error ? error.message : 'Unexpected error while saving.', 'danger');
         } finally {
             this.statsView.setSaveLoading(false);
             if (this.pendingScore && !this.isScoreSaved) {
@@ -634,24 +634,24 @@ class KnightsTour {
     }
 
     async loadScoresFromDatabase() {
-        this.statsView.setScoresLoading('Carregando histórico do banco...');
+        this.statsView.setScoresLoading('Loading score history from database...');
 
         try {
             const response = await fetch(`${SCORE_API_URL}?limit=100`);
             const payload = await response.json();
 
             if (!response.ok || !payload.ok) {
-                throw new Error(payload.error || 'Falha ao carregar histórico.');
+                throw new Error(payload.error || 'Failed to load score history.');
             }
 
             const rows = Array.isArray(payload.data) ? payload.data : [];
             this.historyScores = rows;
             this.statsView.renderScoresTable(rows);
-            this.statsView.setScoresStatus(`Total de registros: ${rows.length}`, 'success');
+            this.statsView.setScoresStatus(`Total records: ${rows.length}`, 'success');
         } catch (error) {
             this.historyScores = [];
             this.statsView.renderScoresTable([]);
-            this.statsView.setScoresError(error instanceof Error ? error.message : 'Erro ao buscar histórico.');
+            this.statsView.setScoresError(error instanceof Error ? error.message : 'Error while loading score history.');
         }
     }
 
@@ -660,7 +660,7 @@ class KnightsTour {
 
         if (rawSolution.length === 0) return [];
 
-        // Suporta tanto formato coordenado [{row,col}] quanto sequencia [1..64].
+        // Supports both coordinate format [{row,col}] and sequence format [1..64].
         if (typeof rawSolution[0] === 'number') {
             return rawSolution
                 .map((position) => Number(position))
@@ -689,54 +689,54 @@ class KnightsTour {
 
     async applyScoreFromHistory(scoreId) {
         if (this.isRunning) {
-            this.statsView.setScoresError('Aguarde o processamento atual finalizar para aplicar um score.');
+            this.statsView.setScoresError('Wait for the current processing to finish before applying a score.');
             return;
         }
 
         if (!Number.isInteger(scoreId) || scoreId <= 0) {
-            this.statsView.setScoresError('ID de score inválido.');
+            this.statsView.setScoresError('Invalid score ID.');
             return;
         }
 
         const score = this.historyScores.find((item) => Number(item.id) === scoreId);
         if (!score) {
-            this.statsView.setScoresError('Score não encontrado na lista atual.');
+            this.statsView.setScoresError('Score not found in the current list.');
             return;
         }
 
-        const solution = this.normalizeStoredSolution(score.solucao);
+        const solution = this.normalizeStoredSolution(score.solution);
         if (solution.length === 0) {
-            this.statsView.setScoresError('Este score não possui uma solução válida para exibir.');
+            this.statsView.setScoresError('This score does not contain a valid solution to display.');
             return;
         }
 
         this.stopAnimationPlayback(true);
 
         this.solution = solution;
-        this.currentGeneration = Number(score.geracao) || 0;
+        this.currentGeneration = Number(score.generation) || 0;
         this.bestFitness = Number(score.fitness) || 0;
-        this.avgFitness = Number(score.fitnessMedia) || 0;
+        this.avgFitness = Number(score.averageFitness) || 0;
         this.totalGenerations = Number(score.generations) || Math.max(1, this.currentGeneration);
 
         this.updateStats();
         this.statsView.setProgress(this.currentGeneration, this.totalGenerations);
-        this.statsView.setSaveStatus('Score aplicado do histórico.', 'info');
+        this.statsView.setSaveStatus('Score applied from history.', 'info');
         this.statsView.setSaveEnabled(false);
 
         await this.animateSolution();
-        this.statsView.setScoresStatus(`Score ${scoreId} aplicado ao tabuleiro.`, 'success');
+        this.statsView.setScoresStatus(`Score ${scoreId} applied to the board.`, 'success');
     }
 
     promptRemoveScore(scoreId) {
         if (!Number.isInteger(scoreId) || scoreId <= 0) {
-            this.statsView.setScoresError('ID de score inválido.');
+            this.statsView.setScoresError('Invalid score ID.');
             return;
         }
 
         this.deleteScoreTargetId = scoreId;
 
         if (this.deleteScoreModalMessageEl) {
-            this.deleteScoreModalMessageEl.textContent = `Tem certeza que deseja remover o score #${scoreId} do histórico?`;
+            this.deleteScoreModalMessageEl.textContent = `Are you sure you want to remove score #${scoreId} from history?`;
         }
 
         this.openDeleteScoreModal();
@@ -761,7 +761,7 @@ class KnightsTour {
 
     async removeScore(scoreId) {
         if (!Number.isInteger(scoreId) || scoreId <= 0) {
-            this.statsView.setScoresError('ID de score inválido.');
+            this.statsView.setScoresError('Invalid score ID.');
             return;
         }
 
@@ -770,7 +770,7 @@ class KnightsTour {
         try {
             if (this.deleteScoreConfirmBtn) {
                 this.deleteScoreConfirmBtn.disabled = true;
-                this.deleteScoreConfirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Removendo...';
+                this.deleteScoreConfirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Removing...';
             }
 
             const response = await fetch(`${SCORE_API_URL}/${scoreId}`, {
@@ -780,13 +780,13 @@ class KnightsTour {
             const payload = await response.json();
 
             if (!response.ok || !payload.ok) {
-                throw new Error(payload.error || 'Falha ao remover o score.');
+                throw new Error(payload.error || 'Failed to remove score.');
             }
 
             await this.loadScoresFromDatabase();
-            this.statsView.setScoresStatus(`Score ${scoreId} removido com sucesso.`, 'success');
+            this.statsView.setScoresStatus(`Score ${scoreId} removed successfully.`, 'success');
         } catch (error) {
-            this.statsView.setScoresError(error instanceof Error ? error.message : 'Erro inesperado ao remover score.');
+            this.statsView.setScoresError(error instanceof Error ? error.message : 'Unexpected error while removing score.');
         } finally {
             if (this.deleteScoreConfirmBtn) {
                 this.deleteScoreConfirmBtn.disabled = false;
@@ -812,7 +812,7 @@ class KnightsTour {
         this.boardView.hideKnight();
         this.populationChartView.reset();
         
-        // Resetar stats
+        // Reset stats
         this.updateStats();
         this.statsView.resetOutput();
         this.setAnimationControlsState(false);
@@ -821,7 +821,7 @@ class KnightsTour {
     }
 }
 
-// Inicializar ao carregar a página
+// Initialize after page load
 document.addEventListener('DOMContentLoaded', () => {
     new KnightsTour();
 });

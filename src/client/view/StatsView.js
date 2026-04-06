@@ -14,7 +14,7 @@ class StatsView {
         this.scoresTableStatusEl = document.getElementById('scoresTableStatus');
     }
 
-    setScoresLoading(message = 'Carregando histórico...') {
+    setScoresLoading(message = 'Loading history...') {
         if (this.scoresTableStatusEl) {
             this.scoresTableStatusEl.className = 'scores-table-status text-muted mb-2';
             this.scoresTableStatusEl.textContent = message;
@@ -41,16 +41,16 @@ class StatsView {
         this.scoresTableBodyEl.innerHTML = '';
 
         if (!Array.isArray(rows) || rows.length === 0) {
-            this.scoresTableBodyEl.innerHTML = '<tr><td colspan="13" class="text-center text-muted py-3">Sem dados para exibir.</td></tr>';
+            this.scoresTableBodyEl.innerHTML = '<tr><td colspan="13" class="text-center text-muted py-3">No data to display.</td></tr>';
             return;
         }
 
         rows.forEach((row) => {
             const tr = document.createElement('tr');
             const values = [
-                this.formatDateValue(row.criadoEm),
+                this.formatDateValue(row.createdAt),
                 this.formatNumericValue(row.fitness),
-                this.formatNumericValue(row.fitnessMedia),
+                this.formatNumericValue(row.averageFitness),
                 this.formatNumericValue(row.generations),
                 this.formatNumericValue(row.chromosomes),
                 this.formatNumericValue(row.selectionRate),
@@ -77,14 +77,14 @@ class StatsView {
             applyButton.className = 'btn btn-sm btn-outline-primary score-apply-btn';
             applyButton.dataset.scoreId = String(row.id);
             applyButton.innerHTML = '<i class="bi bi-play-circle"></i>';
-            applyButton.title = 'Aplicar score no tabuleiro';
+            applyButton.title = 'Apply score to board';
 
             const removeButton = document.createElement('button');
             removeButton.type = 'button';
             removeButton.className = 'btn btn-sm btn-outline-danger score-delete-btn';
             removeButton.dataset.scoreId = String(row.id);
             removeButton.innerHTML = '<i class="bi bi-trash"></i>';
-            removeButton.title = 'Remover score';
+            removeButton.title = 'Remove score';
 
             actionGroup.appendChild(applyButton);
             actionGroup.appendChild(removeButton);
@@ -110,9 +110,7 @@ class StatsView {
             return String(value);
         }
 
-        return date.toLocaleString('pt-BR', {
-            timeZone: 'America/Sao_Paulo'
-        });
+        return date.toLocaleString('en-US');
     }
 
     bindSave(onSave) {
@@ -130,7 +128,7 @@ class StatsView {
 
         this.saveScoreBtn.dataset.saved = 'false';
         this.saveScoreBtn.disabled = true;
-        this.saveScoreBtn.innerHTML = '<i class="bi bi-save"></i> Salvar dados';
+        this.saveScoreBtn.innerHTML = '<i class="bi bi-save"></i> Save data';
     }
 
     setGenerationStats(currentGeneration, bestFitness, avgFitness) {
@@ -159,7 +157,7 @@ class StatsView {
 
         this.resultsEl.innerHTML = `
             <div class="alert alert-warning">
-                <i class="bi bi-hourglass-split"></i> Executando evolução genética...
+                <i class="bi bi-hourglass-split"></i> Running genetic evolution...
             </div>
         `;
     }
@@ -170,7 +168,7 @@ class StatsView {
         this.resultsEl.innerHTML = `
             <div class="alert alert-info">
                 <i class="bi bi-cpu"></i>
-                Evolução concluída em ${generationsExecuted} gerações. Melhor fitness: ${bestFitness}/64
+                Evolution completed in ${generationsExecuted} generations. Best fitness: ${bestFitness}/64
             </div>
         `;
     }
@@ -186,7 +184,7 @@ class StatsView {
 
         if (isLoading) {
             this.saveScoreBtn.disabled = true;
-            this.saveScoreBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Salvando...';
+            this.saveScoreBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Saving...';
             return;
         }
 
@@ -194,7 +192,7 @@ class StatsView {
             return;
         }
 
-        this.saveScoreBtn.innerHTML = '<i class="bi bi-save"></i> Salvar dados';
+        this.saveScoreBtn.innerHTML = '<i class="bi bi-save"></i> Save data';
     }
 
     setSaveCompleted() {
@@ -202,7 +200,7 @@ class StatsView {
 
         this.saveScoreBtn.dataset.saved = 'true';
         this.saveScoreBtn.disabled = true;
-        this.saveScoreBtn.innerHTML = '<i class="bi bi-check2-circle"></i> Dados salvos';
+        this.saveScoreBtn.innerHTML = '<i class="bi bi-check2-circle"></i> Data saved';
     }
 
     setSaveStatus(message, variant = 'muted') {
@@ -217,7 +215,7 @@ class StatsView {
 
         this.resultsEl.innerHTML = `
             <div class="alert alert-info mt-3">
-                <i class="bi bi-play-circle"></i> Animando percurso: ${solutionLength}/64 casas visitadas
+                <i class="bi bi-play-circle"></i> Animating path: ${solutionLength}/64 visited squares
             </div>
         `;
     }
@@ -227,7 +225,7 @@ class StatsView {
 
         this.resultsEl.innerHTML = `
             <div class="alert alert-warning">
-                <i class="bi bi-exclamation-triangle"></i> Nenhum percurso válido encontrado.
+                <i class="bi bi-exclamation-triangle"></i> No valid path found.
             </div>
         `;
     }
@@ -238,8 +236,8 @@ class StatsView {
         if (solutionLength === 64) {
             this.resultsEl.innerHTML = `
                 <div class="alert alert-success">
-                    <i class="bi bi-trophy"></i> <strong>Solução encontrada!</strong><br>
-                    Casas visitadas: <strong>${solutionLength}/64</strong>
+                    <i class="bi bi-trophy"></i> <strong>Solution found!</strong><br>
+                    Visited squares: <strong>${solutionLength}/64</strong>
                 </div>
             `;
             return;
@@ -247,8 +245,8 @@ class StatsView {
 
         this.resultsEl.innerHTML = `
             <div class="alert alert-warning">
-                <i class="bi bi-emoji-frown"></i> <strong>Solução não encontrada.</strong><br>
-                Casas visitadas: <strong>${solutionLength}/64</strong>
+                <i class="bi bi-emoji-frown"></i> <strong>Solution not found.</strong><br>
+                Visited squares: <strong>${solutionLength}/64</strong>
             </div>
         `;
     }
@@ -284,14 +282,14 @@ class StatsView {
         this.setVisitedSquares(0);
         this.resetProgress();
         this.resetSaveButton();
-        this.setSaveStatus('O salvamento será liberado ao final do processamento.');
+        this.setSaveStatus('Saving will be enabled when processing finishes.');
 
         if (this.solutionPathEl) {
-            this.solutionPathEl.innerHTML = '<span class="text-muted">Aguardando resultado...</span>';
+            this.solutionPathEl.innerHTML = '<span class="text-muted">Waiting for result...</span>';
         }
 
         if (this.resultsEl) {
-            this.resultsEl.innerHTML = '<i class="bi bi-info-circle"></i> Aguardando início da evolução...';
+            this.resultsEl.innerHTML = '<i class="bi bi-info-circle"></i> Waiting for evolution to start...';
         }
     }
 }
