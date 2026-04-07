@@ -26,6 +26,8 @@ At each generation, the system:
 5. Applies life-span rules when that option is enabled.
 6. Updates the interface statistics and continues until the generation limit is reached or a full path is found.
 
+Generation processing runs as an asynchronous backend job. The client creates a job, subscribes to server-sent events for progress updates, and can request cancellation while processing is running.
+
 The search behavior changes depending on the selected processing mode:
 
 - Elitist: prioritizes the best-ranked individuals.
@@ -72,7 +74,24 @@ npm run start
 npm run server
 ```
 
-4. Open the frontend URL shown by BrowserSync (for example, http://localhost:3001).
+4. Open the frontend URL shown by BrowserSync (default: http://localhost:3000).
+
+## Environment Variables
+
+- `PORT`: API server port (default: `3333`).
+- `SCORE_DB_PATH`: custom SQLite file path (default: `data/scores.db` under project root).
+- `GENERATION_JOB_TTL_MS`: retention time for finished generation jobs in memory (default: `300000`).
+
+## Generation Job API
+
+The generation flow is job-based:
+
+1. `POST /api/generate/jobs`: starts a generation job.
+2. `GET /api/generate/jobs/:id`: fetches job status/result.
+3. `GET /api/generate/jobs/:id/events`: subscribes to progress events (SSE).
+4. `DELETE /api/generate/jobs/:id`: requests stop for a running job.
+
+Possible job statuses: `running`, `completed`, `stopped`, `failed`.
 
 ## Project Structure
 
@@ -96,4 +115,5 @@ npm run server
 - The roulette option used in the project is a simple random selection among available individuals.
 - The best path found may not always be a complete 64-square solution, but the interface clearly shows how far the search progressed.
 - The displayed solution path updates in real time during the animation.
+- Stop requests are cooperative: the job receives a cancellation flag and ends as soon as the current processing checkpoints are reached.
    
