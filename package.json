@@ -1,0 +1,28 @@
+{
+    "name": "knight-tour",
+    "version": "1.0.0",
+    "description": "A Knight's Tour solver with genetic algorithm",
+    "main": "index.js",
+    "type": "module",
+    "scripts": {
+        "start": "browser-sync start --server --index public/index.html --port 3000 --no-watch --no-ui --no-notify --no-open",
+        "server": "node --experimental-strip-types src/server/server.ts",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": [
+        "javascript",
+        "genetic algorithm",
+        "sqlite",
+        "knight's tour",
+        "memory"
+    ],
+    "author": "",
+    "license": "ISC",
+    "devDependencies": {
+        "browser-sync": "^3.0.4",
+        "better-sqlite3": "^11.10.0",
+        "knex": "^3.1.0",
+        "@libsql/client": "^0.17.0"
+
+    }
+}
