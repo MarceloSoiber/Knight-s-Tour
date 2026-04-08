@@ -4,6 +4,9 @@ JavaScript application that explores the Knight's Tour problem using a genetic a
 
 The project includes a visual interface to follow the evolution, tune the search parameters, inspect the board in real time, and control the animation of the discovered solution.
 
+<img width="1069" height="902" alt="image" src="https://github.com/user-attachments/assets/2e814821-2483-4154-8768-548a412faf41" />
+
+
 ## Overview
 
 The project is split into two layers:
@@ -95,21 +98,39 @@ Possible job statuses: `running`, `completed`, `stopped`, `failed`.
 
 ## Project Structure
 
-- `public/index.html`: main application interface.
-- `public/style.css`: board, control panel, and statistics styles.
-- `src/client/main.js`: orchestrates UI, animation, and API integration.
-- `src/client/view/BoardView.js`: board rendering and knight position updates.
-- `src/client/view/StatsView.js`: statistics, progress, and history table rendering.
-- `src/client/view/PlaybackControlsView.js`: playback and action button bindings.
-- `src/client/view/PopulationChartView.js`: population chart rendering.
-- `src/client/model/Score.js`: client-side score object used before persistence.
-- `src/server/server.ts`: HTTP API entrypoint.
-- `src/server/service/GenerationService.ts`: genetic algorithm processing.
-- `src/server/service/Score.ts`: SQLite persistence and score retrieval.
-- `src/server/model/Chromosome.ts`: chromosome domain model.
-- `src/server/model/Score.ts`: backend score model.
-- `src/server/controller/GenerationController.ts`: generation orchestration.
-
+```text
+project-root/
+├── public/
+│   ├── index.html          # Main application interface
+│   └── style.css           # Board, controls, and stats styles
+│
+├── src/
+│   ├── client/
+│   │   ├── main.js         # UI orchestration, animation, API integration
+│   │   │
+│   │   ├── view/
+│   │   │   ├── BoardView.js              # Board rendering + knight position
+│   │   │   ├── StatsView.js              # Stats, progress, history table
+│   │   │   ├── PlaybackControlsView.js   # Controls and action bindings
+│   │   │   └── PopulationChartView.js    # Population chart rendering
+│   │   │
+│   │   └── model/
+│   │       └── Score.js     # Client-side score (pre-persistence)
+│   │
+│   └── server/
+│       ├── server.ts        # HTTP API entrypoint
+│       │
+│       ├── controller/
+│       │   └── GenerationController.ts   # Request orchestration
+│       │
+│       ├── service/
+│       │   ├── GenerationService.ts      # Genetic algorithm logic
+│       │   └── Score.ts                  # SQLite persistence layer
+│       │
+│       └── model/
+│           ├── Chromosome.ts             # Domain model
+│           └── Score.ts                  # Backend score entity
+```
 ## Notes
 
 - The roulette option used in the project is a simple random selection among available individuals.
