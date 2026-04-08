@@ -252,7 +252,10 @@ class GenerationService {
 
 	private selectIndividuals(selectionRate: number): void {
 		this.sortPopulation();
-		const count = Math.floor((this.population.length * selectionRate) / 100);
+		if (this.population.length === 0) return;
+
+		// Keep at least one chromosome to avoid empty-population crashes.
+		const count = Math.max(1, Math.floor((this.population.length * selectionRate) / 100));
 		this.population = this.population.slice(0, Math.min(count, this.population.length));
 	}
 
@@ -320,21 +323,30 @@ class GenerationService {
 		}
 
 		this.population = nextPopulation;
+
+		if (this.population.length === 0) {
+			// If all chromosomes expired, reseed one individual so evolution can continue.
+			const fallback = new Chromosome(-2);
+			fallback.setSolution(this.createRandomGenes());
+			fallback.setScore(this.fitness(fallback));
+			fallback.setAge(lifeExpectancy);
+			this.population.push(fallback);
+		}
 	}
 
 	private fitness(chromosome: Chromosome): number {
 		const genes = chromosome.getSolution();
 		if (!genes || genes.length === 0) return 0;
 
-		let total = 0;
+		// Fitness must reflect the contiguous tour shown on the board.
+		let total = 1;
 		for (let i = 1; i < genes.length; i++) {
 			if (this.isValidKnightMove(genes[i - 1], genes[i])) {
 				total += 1;
+			} else {
+				break;
 			}
 		}
-
-		// Mirrors the Java rule that always adds one for the last element.
-		total += 1;
 
 		return total;
 	}
@@ -395,7 +407,15 @@ class GenerationService {
 	}
 
 	private sortPopulation(): void {
-		this.population.sort((a, b) => b.getScore() - a.getScore());
+		//this.population.sort((a, b) => b.getScore() - a.getScore());
+		this.population.sort((a, b) => {
+			const scoreDiff = b.getScore() - a.getScore();
+			if (scoreDiff !== 0) {
+				return scoreDiff;
+			}
+
+			return a.getAge() - b.getAge();
+		});
 	}
 
 	private calculateAverageFitness(): number {

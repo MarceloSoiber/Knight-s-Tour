@@ -205,7 +205,7 @@ class KnightsTour {
             const evolutionResult = finalJob.result;
             this.applyEvolutionResultStats(evolutionResult);
             this.solution = evolutionResult.solution;
-            this.statsView.showEvolutionCompleted(evolutionResult.generationsExecuted, evolutionResult.bestFitness);
+            this.statsView.showEvolutionCompleted(evolutionResult.generationsExecuted, this.bestFitness);
             this.preparePendingScore(config, evolutionResult);
 
             if (!evolutionResult.stopped) {
@@ -295,7 +295,9 @@ class KnightsTour {
             const applySnapshot = (job) => {
                 if (!job) return;
 
-                if (job.progress) {
+                if (job.result) {
+                    this.applyEvolutionResultStats(job.result);
+                } else if (job.progress) {
                     this.currentGeneration = Number(job.progress.generation) || 0;
                     this.bestFitness = Number(job.progress.bestFitness) || 0;
                     this.avgFitness = Number(job.progress.avgFitness) || 0;
@@ -307,10 +309,6 @@ class KnightsTour {
                     this.updateStats();
                     this.updateProgressBar();
                     this.updatePopulationChart(Number(job.progress.chromosomeTotal) || 0);
-                }
-
-                if (!job.progress && job.result) {
-                    this.applyEvolutionResultStats(job.result);
                 }
             };
 
@@ -387,8 +385,14 @@ class KnightsTour {
     }
 
     applyEvolutionResultStats(evolutionResult) {
+        const solutionLength = Array.isArray(evolutionResult?.solution)
+            ? evolutionResult.solution.length
+            : null;
+
         this.currentGeneration = Number(evolutionResult?.generationsExecuted) || 0;
-        this.bestFitness = Number(evolutionResult?.bestFitness) || 0;
+        this.bestFitness = Number.isInteger(solutionLength)
+            ? solutionLength
+            : Number(evolutionResult?.bestFitness) || 0;
         this.avgFitness = Number(evolutionResult?.avgFitness) || 0;
 
         if (this.totalGenerations > 0) {
@@ -580,7 +584,7 @@ class KnightsTour {
 
     preparePendingScore(config, evolutionResult) {
         const score = new Score(config);
-        score.setFitness(evolutionResult.bestFitness);
+        score.setFitness(this.bestFitness);
         score.setAverageFitness(evolutionResult.avgFitness);
         score.setGeneration(evolutionResult.generationsExecuted);
         score.setCreatedAt(new Date());
