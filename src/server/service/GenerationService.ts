@@ -50,6 +50,16 @@ class GenerationService {
 		this.initializePopulation(cfg.chromosomes, cfg.lifeExpectancy, cfg.activateLifeExpectancy);
 		const shouldStop = (): boolean => Boolean(callbacks.shouldStop && callbacks.shouldStop());
 
+		if (this.population.length === 0) {
+			return {
+				generationsExecuted: 0,
+				bestFitness: 0,
+				avgFitness: 0,
+				solution: [],
+				stopped: false
+			};
+		}
+
 		let best = this.population[0];
 		let generation = 0;
 		let stopped = false;
@@ -72,6 +82,10 @@ class GenerationService {
 				}
 			}
 			generation += 1;
+			if (this.population.length === 0) {
+				stopped = true;
+				break;
+			}
 			this.sortPopulation();
 			best = this.population[0];
 
@@ -102,16 +116,26 @@ class GenerationService {
 			await this.sleep(0);
 		}
 
+		if (this.population.length === 0) {
+			return {
+				generationsExecuted: generation,
+				bestFitness: 0,
+				avgFitness: 0,
+				solution: [],
+				stopped: true
+			};
+		}
+
 		this.sortPopulation();
 		best = this.population[0];
 		
-		const validPath = this.extractValidPath(best.getSolution());
+		const solution = this.convertSolutionToCoordinates(best.getSolution());
 
 		return {
 			generationsExecuted: generation,
 			bestFitness: best.getScore(),
 			avgFitness: this.calculateAverageFitness(),
-			solution: validPath,
+			solution,
 			stopped
 		};
 	}
@@ -160,9 +184,8 @@ class GenerationService {
 		this.agePopulation(cfg.activateLifeExpectancy);
 
 		const crossoverCount = Math.floor((cfg.crossoverRate * this.population.length) / 100);
-		const limit = crossoverCount % 2 === 0 ? crossoverCount : crossoverCount - 1;
 
-		for (let i = 0; i < limit - 1 && i + 1 < this.population.length; i += 2) {
+		for (let i = 0; i < crossoverCount; i += 2) {
 			if (shouldStop()) return true;
 			if ((i & 15) === 0) await this.sleep(0);
 			const father = this.population[i];
@@ -254,8 +277,7 @@ class GenerationService {
 		this.sortPopulation();
 		if (this.population.length === 0) return;
 
-		// Keep at least one chromosome to avoid empty-population crashes.
-		const count = Math.max(1, Math.floor((this.population.length * selectionRate) / 100));
+		const count = Math.floor((this.population.length * selectionRate) / 100);
 		this.population = this.population.slice(0, Math.min(count, this.population.length));
 	}
 
@@ -323,28 +345,84 @@ class GenerationService {
 		}
 
 		this.population = nextPopulation;
-
-		if (this.population.length === 0) {
-			// If all chromosomes expired, reseed one individual so evolution can continue.
-			const fallback = new Chromosome(-2);
-			fallback.setSolution(this.createRandomGenes());
-			fallback.setScore(this.fitness(fallback));
-			fallback.setAge(lifeExpectancy);
-			this.population.push(fallback);
-		}
 	}
 
 	private fitness(chromosome: Chromosome): number {
 		const genes = chromosome.getSolution();
 		if (!genes || genes.length === 0) return 0;
 
-		// Fitness must reflect the contiguous tour shown on the board.
-		let total = 1;
-		for (let i = 1; i < genes.length; i++) {
-			if (this.isValidKnightMove(genes[i - 1], genes[i])) {
-				total += 1;
-			} else {
+		let total = 0;
+		let line = 1;
+		let column = 1;
+
+		for (let pos = 1; pos <= this.totalSquares; pos++) {
+			let supDir = 0;
+			let supEsq = 0;
+			let infDir = 0;
+			let infEsq = 0;
+			let dirSup = 0;
+			let dirInf = 0;
+			let esqSup = 0;
+			let esqInf = 0;
+
+			const current = genes[pos - 1];
+			if (current === undefined) {
 				break;
+			}
+
+			line = Math.floor(current / this.boardSize);
+			if (current % this.boardSize !== 0) {
+				line++;
+			}
+
+			for (let i = 1; i <= this.boardSize; i++) {
+				if (this.convertCoordinateToPosition(line, i) === current) {
+					column = i;
+					break;
+				}
+			}
+
+			if ((line - 2 > 0) && (column + 1 <= this.boardSize)) {
+				supDir = this.convertCoordinateToPosition(line - 2, column + 1);
+			}
+			if ((line - 2 > 0) && (column - 1 > 0)) {
+				supEsq = this.convertCoordinateToPosition(line - 2, column - 1);
+			}
+			if ((line + 2 <= this.boardSize) && (column + 1 <= this.boardSize)) {
+				infDir = this.convertCoordinateToPosition(line + 2, column + 1);
+			}
+			if ((line + 2 <= this.boardSize) && (column - 1 > 0)) {
+				infEsq = this.convertCoordinateToPosition(line + 2, column - 1);
+			}
+			if ((line - 1 > 0) && (column + 2 <= this.boardSize)) {
+				dirSup = this.convertCoordinateToPosition(line - 1, column + 2);
+			}
+			if ((line + 1 <= this.boardSize) && (column + 2 <= this.boardSize)) {
+				dirInf = this.convertCoordinateToPosition(line + 1, column + 2);
+			}
+			if ((line - 1 > 0) && (column - 2 > 0)) {
+				esqSup = this.convertCoordinateToPosition(line - 1, column - 2);
+			}
+			if ((line + 1 <= this.boardSize) && (column - 2 > 0)) {
+				esqInf = this.convertCoordinateToPosition(line + 1, column - 2);
+			}
+
+			if (pos !== this.totalSquares) {
+				const next = genes[pos];
+				if (
+					next === supDir ||
+					next === supEsq ||
+					next === infDir ||
+					next === infEsq ||
+					next === dirInf ||
+					next === dirSup ||
+					next === esqInf ||
+					next === esqSup
+				) {
+					total++;
+				}
+			} else if (current === genes[pos - 1]) {
+				total++;
 			}
 		}
 
@@ -391,31 +469,23 @@ class GenerationService {
 	private extractValidPath(solution: number[]): Array<{ row: number; col: number }> {
 		if (!solution || solution.length === 0) return [];
 
-		const validPath = [this.convertPositionToCoordinate(solution[0])];
+		return this.convertSolutionToCoordinates(solution);
+	}
 
-		for (let i = 1; i < solution.length; i++) {
-			const origin = solution[i - 1];
-			const destination = solution[i];
-			if (!this.isValidKnightMove(origin, destination)) {
-				break;
-			}
-
-			validPath.push(this.convertPositionToCoordinate(destination));
-		}
-
-		return validPath;
+	private convertCoordinateToPosition(row: number, col: number): number {
+		return ((row - 1) * this.boardSize) + col;
 	}
 
 	private sortPopulation(): void {
-		//this.population.sort((a, b) => b.getScore() - a.getScore());
-		this.population.sort((a, b) => {
-			const scoreDiff = b.getScore() - a.getScore();
-			if (scoreDiff !== 0) {
-				return scoreDiff;
-			}
+		this.population.sort((a, b) => b.getScore() - a.getScore());
+		// this.population.sort((a, b) => {
+		// 	const scoreDiff = b.getScore() - a.getScore();
+		// 	if (scoreDiff !== 0) {
+		// 		return scoreDiff;
+		// 	}
 
-			return a.getAge() - b.getAge();
-		});
+		// 	return b.getAge() - a.getAge();
+		// });
 	}
 
 	private calculateAverageFitness(): number {
