@@ -290,7 +290,7 @@ class GenerationService {
 		if (mutationCount <= 0) {
 			return false;
 		}
-		const indexLimit = Math.max(1, this.totalSquares - 1);
+		const indexLimit = Math.max(2, this.totalSquares);
 
 		for (let i = 0; i < mutationCount; i++) {
 			if (shouldStop && shouldStop()) return true;
@@ -349,84 +349,7 @@ class GenerationService {
 
 	private fitness(chromosome: Chromosome): number {
 		const genes = chromosome.getSolution();
-		if (!genes || genes.length === 0) return 0;
-
-		let total = 0;
-		let line = 1;
-		let column = 1;
-
-		for (let pos = 1; pos <= this.totalSquares; pos++) {
-			let supDir = 0;
-			let supEsq = 0;
-			let infDir = 0;
-			let infEsq = 0;
-			let dirSup = 0;
-			let dirInf = 0;
-			let esqSup = 0;
-			let esqInf = 0;
-
-			const current = genes[pos - 1];
-			if (current === undefined) {
-				break;
-			}
-
-			line = Math.floor(current / this.boardSize);
-			if (current % this.boardSize !== 0) {
-				line++;
-			}
-
-			for (let i = 1; i <= this.boardSize; i++) {
-				if (this.convertCoordinateToPosition(line, i) === current) {
-					column = i;
-					break;
-				}
-			}
-
-			if ((line - 2 > 0) && (column + 1 <= this.boardSize)) {
-				supDir = this.convertCoordinateToPosition(line - 2, column + 1);
-			}
-			if ((line - 2 > 0) && (column - 1 > 0)) {
-				supEsq = this.convertCoordinateToPosition(line - 2, column - 1);
-			}
-			if ((line + 2 <= this.boardSize) && (column + 1 <= this.boardSize)) {
-				infDir = this.convertCoordinateToPosition(line + 2, column + 1);
-			}
-			if ((line + 2 <= this.boardSize) && (column - 1 > 0)) {
-				infEsq = this.convertCoordinateToPosition(line + 2, column - 1);
-			}
-			if ((line - 1 > 0) && (column + 2 <= this.boardSize)) {
-				dirSup = this.convertCoordinateToPosition(line - 1, column + 2);
-			}
-			if ((line + 1 <= this.boardSize) && (column + 2 <= this.boardSize)) {
-				dirInf = this.convertCoordinateToPosition(line + 1, column + 2);
-			}
-			if ((line - 1 > 0) && (column - 2 > 0)) {
-				esqSup = this.convertCoordinateToPosition(line - 1, column - 2);
-			}
-			if ((line + 1 <= this.boardSize) && (column - 2 > 0)) {
-				esqInf = this.convertCoordinateToPosition(line + 1, column - 2);
-			}
-
-			if (pos !== this.totalSquares) {
-				const next = genes[pos];
-				if (
-					next === supDir ||
-					next === supEsq ||
-					next === infDir ||
-					next === infEsq ||
-					next === dirInf ||
-					next === dirSup ||
-					next === esqInf ||
-					next === esqSup
-				) {
-					total++;
-				}
-			} else if (current === genes[pos - 1]) {
-				total++;
-			}
-		}
-
-		return total;
+		return this.extractLongestValidPositionPath(genes).length;
 	}
 
 	private isValidKnightMove(origin: number, destination: number): boolean {
@@ -466,26 +389,31 @@ class GenerationService {
 		return solution.map((position) => this.convertPositionToCoordinate(position));
 	}
 
-	private extractValidPositionPath(solution: number[]): number[] {
+	private extractLongestValidPositionPath(solution: number[]): number[] {
 		if (!solution || solution.length === 0) return [];
+		let bestStart = 0;
+		let bestLength = 1;
 
-		const path: number[] = [solution[0]];
-
-		for (let i = 1; i < solution.length; i++) {
-			const origin = solution[i - 1];
-			const destination = solution[i];
-			if (!this.isValidKnightMove(origin, destination)) {
-				break;
+		for (let start = 0; start < solution.length; start++) {
+			let currentLength = 1;
+			for (let i = start + 1; i < solution.length; i++) {
+				if (!this.isValidKnightMove(solution[i - 1], solution[i])) {
+					break;
+				}
+				currentLength += 1;
 			}
 
-			path.push(destination);
+			if (currentLength > bestLength) {
+				bestLength = currentLength;
+				bestStart = start;
+			}
 		}
 
-		return path;
+		return solution.slice(bestStart, bestStart + bestLength);
 	}
 
 	private extractValidPath(solution: number[]): Array<{ row: number; col: number }> {
-		return this.convertSolutionToCoordinates(this.extractValidPositionPath(solution));
+		return this.convertSolutionToCoordinates(this.extractLongestValidPositionPath(solution));
 	}
 
 	private convertCoordinateToPosition(row: number, col: number): number {
