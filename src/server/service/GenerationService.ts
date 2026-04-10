@@ -128,8 +128,8 @@ class GenerationService {
 
 		this.sortPopulation();
 		best = this.population[0];
-		
-		const solution = this.convertSolutionToCoordinates(best.getSolution());
+
+		const solution = this.extractValidPath(best.getSolution());
 
 		return {
 			generationsExecuted: generation,
@@ -286,7 +286,7 @@ class GenerationService {
 			return false;
 		}
 
-		const mutationCount = Math.floor((mutationRate * 100) / this.population.length);
+		const mutationCount = Math.floor((this.population.length * mutationRate) / 100);
 		if (mutationCount <= 0) {
 			return false;
 		}
@@ -466,10 +466,26 @@ class GenerationService {
 		return solution.map((position) => this.convertPositionToCoordinate(position));
 	}
 
-	private extractValidPath(solution: number[]): Array<{ row: number; col: number }> {
+	private extractValidPositionPath(solution: number[]): number[] {
 		if (!solution || solution.length === 0) return [];
 
-		return this.convertSolutionToCoordinates(solution);
+		const path: number[] = [solution[0]];
+
+		for (let i = 1; i < solution.length; i++) {
+			const origin = solution[i - 1];
+			const destination = solution[i];
+			if (!this.isValidKnightMove(origin, destination)) {
+				break;
+			}
+
+			path.push(destination);
+		}
+
+		return path;
+	}
+
+	private extractValidPath(solution: number[]): Array<{ row: number; col: number }> {
+		return this.convertSolutionToCoordinates(this.extractValidPositionPath(solution));
 	}
 
 	private convertCoordinateToPosition(row: number, col: number): number {
@@ -477,15 +493,15 @@ class GenerationService {
 	}
 
 	private sortPopulation(): void {
-		this.population.sort((a, b) => b.getScore() - a.getScore());
-		// this.population.sort((a, b) => {
-		// 	const scoreDiff = b.getScore() - a.getScore();
-		// 	if (scoreDiff !== 0) {
-		// 		return scoreDiff;
-		// 	}
+		// this.population.sort((a, b) => b.getScore() - a.getScore());
+		this.population.sort((a, b) => {
+			const scoreDiff = b.getScore() - a.getScore();
+			if (scoreDiff !== 0) {
+				return scoreDiff;
+			}
 
-		// 	return b.getAge() - a.getAge();
-		// });
+			return b.getAge() - a.getAge();
+		});
 	}
 
 	private calculateAverageFitness(): number {

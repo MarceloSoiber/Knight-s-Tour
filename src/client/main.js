@@ -204,7 +204,7 @@ class KnightsTour {
 
             const evolutionResult = finalJob.result;
             this.applyEvolutionResultStats(evolutionResult);
-            this.solution = evolutionResult.solution;
+            this.solution = this.normalizeEvolutionSolution(evolutionResult);
             this.statsView.showEvolutionCompleted(evolutionResult.generationsExecuted, this.bestFitness);
             this.preparePendingScore(config, evolutionResult);
 
@@ -390,9 +390,7 @@ class KnightsTour {
             : null;
 
         this.currentGeneration = Number(evolutionResult?.generationsExecuted) || 0;
-        this.bestFitness = Number.isInteger(solutionLength)
-            ? solutionLength
-            : Number(evolutionResult?.bestFitness) || 0;
+        this.bestFitness = Number(evolutionResult?.bestFitness) || (Number.isInteger(solutionLength) ? solutionLength : 0);
         this.avgFitness = Number(evolutionResult?.avgFitness) || 0;
 
         if (this.totalGenerations > 0) {
@@ -403,6 +401,17 @@ class KnightsTour {
 
         this.updateStats();
         this.updateProgressBar();
+    }
+
+    normalizeEvolutionSolution(evolutionResult) {
+        const normalized = this.normalizeStoredSolution(evolutionResult?.solution);
+        const reportedFitness = Number(evolutionResult?.bestFitness);
+
+        if (Number.isInteger(reportedFitness) && reportedFitness > 0 && normalized.length > reportedFitness) {
+            return normalized.slice(0, reportedFitness);
+        }
+
+        return normalized;
     }
 
     closeJobEventSource() {
@@ -588,7 +597,7 @@ class KnightsTour {
         score.setAverageFitness(evolutionResult.avgFitness);
         score.setGeneration(evolutionResult.generationsExecuted);
         score.setCreatedAt(new Date());
-        score.setSolution(evolutionResult.solution);
+        score.setSolution(this.solution);
 
         this.pendingScore = score;
         return score;
