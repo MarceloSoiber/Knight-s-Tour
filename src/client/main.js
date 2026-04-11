@@ -21,9 +21,11 @@ class KnightsTour {
         this.animationSpeedMs = 300;
         this.animationResolver = null;
         this.stopRequested = false;
+        this.pendingStopRequest = false;
         this.currentGeneration = 0;
         this.bestFitness = 0;
         this.avgFitness = 0;
+        this.currentChromosomeTotal = 0;
         this.totalGenerations = 0;
         this.solution = [];
         this.currentConfig = null;
@@ -128,10 +130,22 @@ class KnightsTour {
         this.stopRequested = true;
         this.controlsView.setStopEnabled(false);
 
-        if (!this.currentJobId) return;
+        if (!this.currentJobId) {
+            await this.sendStopRequest();
+            return;
+        }
+
+        await this.sendStopRequest(this.currentJobId);
+    }
+
+    async sendStopRequest(jobId) {
+        if (!jobId) {
+            this.pendingStopRequest = true;
+            return;
+        }
 
         try {
-            const response = await fetch(`${GENERATION_JOBS_API_URL}/${this.currentJobId}`, {
+            const response = await fetch(`${GENERATION_JOBS_API_URL}/${jobId}`, {
                 method: 'DELETE'
             });
             const payload = await response.json();
@@ -195,6 +209,11 @@ class KnightsTour {
         try {
             const job = await this.createGenerationJob(config);
             this.currentJobId = job.id;
+
+            if (this.pendingStopRequest) {
+                this.pendingStopRequest = false;
+                await this.sendStopRequest(job.id);
+            }
 
             const finalJob = await this.waitForGenerationJobCompletion(job.id);
 
@@ -306,9 +325,11 @@ class KnightsTour {
                         this.totalGenerations = Number(job.progress.totalGenerations);
                     }
 
+                    this.currentChromosomeTotal = Number(job.progress.chromosomeTotal) || 0;
+
                     this.updateStats();
                     this.updateProgressBar();
-                    this.updatePopulationChart(Number(job.progress.chromosomeTotal) || 0);
+                    this.updatePopulationChart(this.currentChromosomeTotal, this.bestFitness, this.avgFitness);
                 }
             };
 
@@ -401,6 +422,7 @@ class KnightsTour {
 
         this.updateStats();
         this.updateProgressBar();
+        this.updatePopulationChart(this.currentChromosomeTotal, this.bestFitness, this.avgFitness);
     }
 
     normalizeEvolutionSolution(evolutionResult) {
@@ -587,8 +609,8 @@ class KnightsTour {
         this.statsView.setProgress(this.currentGeneration, this.totalGenerations);
     }
 
-    updatePopulationChart(chromosomeTotal) {
-        this.populationChartView.update(this.currentGeneration, chromosomeTotal);
+    updatePopulationChart(chromosomeTotal, bestFitness, avgFitness) {
+        this.populationChartView.update(this.currentGeneration, chromosomeTotal, bestFitness, avgFitness);
     }
 
     preparePendingScore(config, evolutionResult) {
@@ -812,10 +834,12 @@ class KnightsTour {
         this.stopAnimationPlayback(true);
         this.closeJobEventSource();
         this.currentJobId = null;
+        this.pendingStopRequest = false;
 
         this.currentGeneration = 0;
         this.bestFitness = 0;
         this.avgFitness = 0;
+        this.currentChromosomeTotal = 0;
         this.stopRequested = false;
         this.solution = [];
         this.currentConfig = null;

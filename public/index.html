@@ -30,7 +30,7 @@
                                 <div class="config-grid mb-2">
                                     <div class="config-field">
                                         <label for="generations" class="form-label">Generations</label>
-                                        <input type="number" class="form-control" id="generations" value="2000" min="1" required>
+                                        <input type="number" class="form-control" id="generations" value="1000" min="1" required>
                                     </div>
                                     <div class="config-field">
                                         <label for="chromosomes" class="form-label">Chromosomes</label>
@@ -38,19 +38,19 @@
                                     </div>
                                     <div class="config-field">
                                         <label for="selectionRate" class="form-label">Selection (%)</label>
-                                        <input type="number" class="form-control" id="selectionRate" value="50" min="0" max="100" required>
+                                        <input type="number" class="form-control" id="selectionRate" value="70" min="0" max="100" required>
                                     </div>
                                     <div class="config-field">
                                         <label for="crossoverRate" class="form-label">Crossover (%)</label>
-                                        <input type="number" class="form-control" id="crossoverRate" value="100" min="0" max="100" required>
+                                        <input type="number" class="form-control" id="crossoverRate" value="95" min="0" max="100" required>
                                     </div>
                                     <div class="config-field">
                                         <label for="mutationRate" class="form-label">Mutation (%)</label>
-                                        <input type="number" class="form-control" id="mutationRate" value="5" min="0" max="100" required>
+                                        <input type="number" class="form-control" id="mutationRate" value="10" min="0" max="100" required>
                                     </div>
                                     <div class="config-field">
                                         <label for="seriesPerMutation" class="form-label">Mutation Series</label>
-                                        <input type="number" class="form-control" id="seriesPerMutation" value="5" min="1" required>
+                                        <input type="number" class="form-control" id="seriesPerMutation" value="12" min="1" required>
                                     </div>
                                     <div class="config-field config-field-full">
                                         <label for="lifeExpectancy" class="form-label">Life Expectancy</label>
@@ -71,13 +71,13 @@
                                     <h6 class="text-muted options-title">Processing</h6>
                                     <div class="options-inline">
                                         <div class="form-check mb-0 compact-check">
-                                            <input class="form-check-input" type="radio" name="processingOption" id="elitist" value="elitist">
+                                            <input class="form-check-input" type="radio" name="processingOption" id="elitist" value="elitist" checked>
                                             <label class="form-check-label" for="elitist">
                                                 Elitist
                                             </label>
                                         </div>
                                         <div class="form-check mb-0 compact-check">
-                                            <input class="form-check-input" type="radio" name="processingOption" id="rotation" value="rotation" checked>
+                                            <input class="form-check-input" type="radio" name="processingOption" id="rotation" value="rotation" >
                                             <label class="form-check-label" for="rotation">
                                                 Roulette
                                             </label>
@@ -242,11 +242,24 @@
                             </h5>
                         </div>
                         <div class="card-body">
-                            <p class="population-chart-caption text-muted mb-2">
-                                Evolution of total chromosomes per generation.
-                            </p>
-                            <div class="population-chart-wrap">
-                                <canvas id="populationChart" class="population-chart-canvas" aria-label="Real-time population chart" role="img"></canvas>
+                            <div class="population-chart-stack">
+                                <div class="population-chart-panel">
+                                    <p class="population-chart-caption text-muted mb-2">
+                                        Evolution of total chromosomes per generation.
+                                    </p>
+                                    <div class="population-chart-wrap">
+                                        <canvas id="populationChart" class="population-chart-canvas" aria-label="Real-time population chart" role="img"></canvas>
+                                    </div>
+                                </div>
+
+                                <div class="population-chart-panel population-chart-panel-compact">
+                                    <p class="population-chart-caption text-muted mb-2">
+                                        Best and average fitness across generations.
+                                    </p>
+                                    <div class="population-chart-wrap population-chart-wrap-compact">
+                                        <canvas id="fitnessChart" class="population-chart-canvas" aria-label="Best and average fitness chart" role="img"></canvas>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

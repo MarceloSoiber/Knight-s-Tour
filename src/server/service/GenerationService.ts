@@ -45,10 +45,21 @@ class GenerationService {
 	}
 
 	async run(config: Partial<GenerationConfig>, callbacks: GenerationCallbacks = {}): Promise<GenerationResult> {
-	
 		const cfg = this.normalizeConfig(config);
-		this.initializePopulation(cfg.chromosomes, cfg.lifeExpectancy, cfg.activateLifeExpectancy);
-		const shouldStop = (): boolean => Boolean(callbacks.shouldStop && callbacks.shouldStop());
+
+		const shouldStop = () => Boolean(callbacks.shouldStop && callbacks.shouldStop());
+
+		await this.initializePopulation(cfg.chromosomes, cfg.lifeExpectancy, cfg.activateLifeExpectancy, shouldStop);
+
+		if (shouldStop()) {
+			return {
+				generationsExecuted: 0,
+				bestFitness: this.population[0]?.getScore() ?? 0,
+				avgFitness: this.population.length > 0 ? this.calculateAverageFitness() : 0,
+				solution: this.population.length > 0 ? this.extractValidPath(this.population[0].getSolution()) : [],
+				stopped: true
+			};
+		}
 
 		if (this.population.length === 0) {
 			return {
@@ -60,7 +71,6 @@ class GenerationService {
 			};
 		}
 
-		let best = this.population[0];
 		let generation = 0;
 		let stopped = false;
 
@@ -70,28 +80,15 @@ class GenerationService {
 				break;
 			}
 
-			if (cfg.processingOption === 'elitist') {
-				if (await this.generateElitistGeneration(cfg, shouldStop)) {
-					stopped = true;
-					break;
-				}
-			} else {
-				if (await this.generateRouletteGeneration(cfg, shouldStop)) {
-					stopped = true;
-					break;
-				}
-			}
-			generation += 1;
-			if (this.population.length === 0) {
+			if (await this.generateGeneration(cfg, shouldStop)) {
 				stopped = true;
 				break;
 			}
-			this.sortPopulation();
-			best = this.population[0];
 
-			if (best.getScore() === this.totalSquares) {
-				break;
-			}
+			generation++;
+
+			this.sortPopulation();
+			const best = this.population[0];
 
 			if (callbacks.onGeneration) {
 				callbacks.onGeneration({
@@ -103,68 +100,61 @@ class GenerationService {
 				});
 			}
 
-			if (shouldStop()) {
-				stopped = true;
-				break;
-			}
-
 			if (best.getScore() === this.totalSquares) {
 				break;
 			}
 
-			// Yield occasionally to keep cancellation responsive without heavy overhead.
 			if ((generation & 7) === 0) {
 				await this.sleep(0);
 			}
 		}
 
-		if (this.population.length === 0) {
-			return {
-				generationsExecuted: generation,
-				bestFitness: 0,
-				avgFitness: 0,
-				solution: [],
-				stopped: true
-			};
-		}
-
 		this.sortPopulation();
-		best = this.population[0];
-
-		const solution = this.extractValidPath(best.getSolution());
+		const best = this.population[0];
 
 		return {
 			generationsExecuted: generation,
 			bestFitness: best.getScore(),
 			avgFitness: this.calculateAverageFitness(),
-			solution,
+			solution: this.extractValidPath(best.getSolution()),
 			stopped
 		};
 	}
 
 	private normalizeConfig(config: Partial<GenerationConfig>): GenerationConfig {
 		return {
-			generations: Number(config.generations) || 1,
-			chromosomes: Number(config.chromosomes) || 100,
-			selectionRate: Number(config.selectionRate) || 50,
-			crossoverRate: Number(config.crossoverRate) || 100,
-			mutationRate: Number(config.mutationRate) || 5,
-			seriesPerMutation: Number(config.seriesPerMutation) || 5,
-			lifeExpectancy: Number(config.lifeExpectancy) || 15,
-			activateLifeExpectancy: Boolean(config.activateLifeExpectancy),
+			generations: config.generations ?? 1,
+			chromosomes: config.chromosomes ?? 100,
+			selectionRate: config.selectionRate ?? 50,
+			crossoverRate: config.crossoverRate ?? 100,
+			mutationRate: config.mutationRate ?? 5,
+			seriesPerMutation: config.seriesPerMutation ?? 5,
+			lifeExpectancy: config.lifeExpectancy ?? 15,
+			activateLifeExpectancy: config.activateLifeExpectancy ?? false,
 			processingOption: config.processingOption === 'elitist' ? 'elitist' : 'rotation'
 		};
 	}
 
-	private initializePopulation(quantity: number, lifeExpectancy: number, activateLifeExpectancy: boolean): void {
+	private async initializePopulation(
+		quantity: number,
+		lifeExpectancy: number,
+		activateLifeExpectancy: boolean,
+		shouldStop?: () => boolean
+	): Promise<void> {
 		this.population = [];
 
 		for (let i = 0; i < quantity; i++) {
+			if (shouldStop && shouldStop()) return;
+
 			const genes = this.createRandomGenes();
 			const chromosome = new Chromosome(-2);
 			chromosome.setSolution(genes);
 			chromosome.setScore(this.fitness(chromosome));
 			this.population.push(chromosome);
+
+			if ((i & 15) === 0) {
+				await this.sleep(0);
+			}
 		}
 
 		this.applyLifeExpectancy(lifeExpectancy, activateLifeExpectancy);
@@ -173,151 +163,178 @@ class GenerationService {
 
 	private createRandomGenes(): number[] {
 		const genes = Array.from({ length: this.totalSquares }, (_, i) => i + 1);
-		
+
 		for (let i = genes.length - 1; i > 0; i--) {
 			const j = Math.floor(Math.random() * (i + 1));
 			[genes[i], genes[j]] = [genes[j], genes[i]];
 		}
+
 		return genes;
 	}
 
-	private async generateElitistGeneration(cfg: GenerationConfig, shouldStop: () => boolean): Promise<boolean> {
+	private async generateGeneration(cfg: GenerationConfig, shouldStop: () => boolean): Promise<boolean> {
 		if (shouldStop()) return true;
+
 		this.agePopulation(cfg.activateLifeExpectancy);
+		this.sortPopulation();
 
-		const crossoverCount = Math.floor((cfg.crossoverRate * this.population.length) / 100);
-		const limit = crossoverCount % 2 === 0 ? crossoverCount : crossoverCount - 1;
+		const selectionCount = this.getSelectionCount(cfg.selectionRate);
+		const selectionPool = this.getSelectionPool(selectionCount, cfg.processingOption);
 
-		for (let i = 0; i < limit; i += 2) {
+		const elite = this.preserveElite(1);
+		const newPopulation: Chromosome[] = [...elite];
+
+		while (newPopulation.length < this.population.length) {
 			if (shouldStop()) return true;
-			if ((i & 63) === 0) await this.sleep(0);
-			const father = this.population[i];
-			const mother = this.population[i + 1];
-			const cutPoint = Math.floor(Math.random() * Math.max(1, this.totalSquares - 2));
-			const [child1, child2] = this.generateChildren(father, mother, cutPoint);
-			this.population.push(child1, child2);
+
+			const father = this.tournamentSelection(selectionPool);
+			const mother = this.tournamentSelection(selectionPool);
+
+			const [child1, child2] = this.generateOffspring(father, mother, cfg.crossoverRate);
+
+			newPopulation.push(child1);
+			if (newPopulation.length < this.population.length) {
+				newPopulation.push(child2);
+			}
+
+			if ((newPopulation.length & 15) === 0) {
+				await this.sleep(0);
+			}
 		}
 
-		if (shouldStop()) return true;
-		this.selectIndividuals(cfg.selectionRate);
-		if (shouldStop()) return true;
+		this.population = newPopulation;
+
 		if (await this.mutate(cfg.mutationRate, cfg.seriesPerMutation, shouldStop)) return true;
-		if (shouldStop()) return true;
+
 		this.applyLifeExpectancy(cfg.lifeExpectancy, cfg.activateLifeExpectancy);
-		return shouldStop();
+
+		return false;
 	}
 
-	private async generateRouletteGeneration(cfg: GenerationConfig, shouldStop: () => boolean): Promise<boolean> {
-		if (shouldStop()) return true;
-		this.agePopulation(cfg.activateLifeExpectancy);
+	private getSelectionCount(selectionRate: number): number {
+		const boundedRate = Math.max(1, Math.min(100, Number(selectionRate) || 50));
+		return Math.max(2, Math.floor((this.population.length * boundedRate) / 100));
+	}
 
-		const crossoverCount = Math.floor((cfg.crossoverRate * this.population.length) / 100);
-		const limit = crossoverCount % 2 === 0 ? crossoverCount : crossoverCount - 1;
-
-		for (let i = 0; i < limit; i += 2) {
-			if (shouldStop()) return true;
-			if ((i & 63) === 0) await this.sleep(0);
-			const fatherIndex = Math.floor(Math.random() * this.population.length);
-			const motherIndex = Math.floor(Math.random() * this.population.length);
-
-			const father = this.population[fatherIndex];
-			const mother = this.population[motherIndex];
-			const cutPoint = Math.floor(Math.random() * Math.max(1, this.totalSquares));
-			const [child1, child2] = this.generateChildren(father, mother, cutPoint);
-			this.population.push(child1, child2);
+	private getSelectionPool(selectionCount: number, mode: GenerationConfig['processingOption']): Chromosome[] {
+		if (selectionCount >= this.population.length) {
+			return [...this.population];
 		}
 
-		if (shouldStop()) return true;
-		if (await this.mutate(cfg.mutationRate, cfg.seriesPerMutation, shouldStop)) return true;
-		if (shouldStop()) return true;
-		this.selectIndividuals(cfg.selectionRate);
-		if (shouldStop()) return true;
-		this.applyLifeExpectancy(cfg.lifeExpectancy, cfg.activateLifeExpectancy);
-		return shouldStop();
+		if (mode === 'elitist') {
+			return this.population.slice(0, selectionCount);
+		}
+
+		const shuffled = [...this.population].sort(() => Math.random() - 0.5);
+		return shuffled.slice(0, selectionCount);
 	}
 
-	private generateChildren(father: Chromosome, mother: Chromosome, cutPoint: number): [Chromosome, Chromosome] {
-		const fatherGenes = father.getSolution();
-		const motherGenes = mother.getSolution();
+	private preserveElite(count: number = 1): Chromosome[] {
+		this.sortPopulation();
+		return this.population.slice(0, count);
+	}
 
-		const childGenes1 = this.crossGenes(fatherGenes, motherGenes, cutPoint);
-		const childGenes2 = this.crossGenes(motherGenes, fatherGenes, cutPoint);
+	private tournamentSelection(pool: Chromosome[], size: number = 3): Chromosome {
+		const source = pool.length > 0 ? pool : this.population;
+		let best: Chromosome | null = null;
+
+		for (let i = 0; i < size; i++) {
+			const candidate = source[Math.floor(Math.random() * source.length)];
+			if (!best || candidate.getScore() > best.getScore()) {
+				best = candidate;
+			}
+		}
+
+		return best!;
+	}
+
+	private generateOffspring(father: Chromosome, mother: Chromosome, crossoverRate: number): [Chromosome, Chromosome] {
+		const boundedRate = Math.max(0, Math.min(100, Number(crossoverRate) || 0));
+
+		if (Math.random() * 100 >= boundedRate) {
+			return [father.clone(), mother.clone()];
+		}
+
+		return this.generateChildren(father, mother);
+	}
+
+	private generateChildren(father: Chromosome, mother: Chromosome): [Chromosome, Chromosome] {
+		const child1Genes = this.crossOX(father.getSolution(), mother.getSolution());
+		const child2Genes = this.crossOX(mother.getSolution(), father.getSolution());
 
 		const child1 = new Chromosome(-2);
-		child1.setSolution(childGenes1);
+		child1.setSolution(child1Genes);
 		child1.setScore(this.fitness(child1));
 
 		const child2 = new Chromosome(-2);
-		child2.setSolution(childGenes2);
+		child2.setSolution(child2Genes);
 		child2.setScore(this.fitness(child2));
 
 		return [child1, child2];
 	}
 
-	private crossGenes(first: number[], second: number[], cutPoint: number): number[] {
-		const cut = Math.max(0, Math.min(cutPoint, first.length));
-		const genes: number[] = [];
-		const used = new Array<boolean>(this.totalSquares + 1).fill(false);
+	private crossOX(parent1: number[], parent2: number[]): number[] {
+		const size = parent1.length;
+		const child = new Array<number>(size).fill(-1);
 
-		for (let i = 0; i < cut; i++) {
-			const gene = first[i];
-			genes.push(gene);
-			used[gene] = true;
+		let start = Math.floor(Math.random() * size);
+		let end = Math.floor(Math.random() * size);
+
+		if (start > end) [start, end] = [end, start];
+
+		for (let i = start; i <= end; i++) {
+			child[i] = parent1[i];
 		}
 
-		for (let i = 0; i < second.length; i++) {
-			const gene = second[i];
-			if (!used[gene]) {
-				genes.push(gene);
-				used[gene] = true;
+		let p2Index = 0;
+
+		for (let i = 0; i < size; i++) {
+			if (child[i] !== -1) continue;
+
+			while (child.includes(parent2[p2Index])) {
+				p2Index++;
 			}
+
+			child[i] = parent2[p2Index++];
 		}
 
-		return genes;
+		return child;
 	}
 
-	private selectIndividuals(selectionRate: number): void {
-		this.sortPopulation();
-		if (this.population.length === 0) return;
-
-		const count = Math.floor((this.population.length * selectionRate) / 100);
-		this.population = this.population.slice(0, Math.min(count, this.population.length));
-	}
-
-	private async mutate(mutationRate: number, swapsPerIndividual: number, shouldStop?: () => boolean): Promise<boolean> {
-		if (this.population.length === 0 || mutationRate <= 0 || swapsPerIndividual <= 0) {
-			return false;
-		}
+	private async mutate(
+		mutationRate: number,
+		swapsPerIndividual: number,
+		shouldStop?: () => boolean
+	): Promise<boolean> {
+		if (mutationRate <= 0 || swapsPerIndividual <= 0) return false;
 
 		const mutationCount = Math.floor((this.population.length * mutationRate) / 100);
-		if (mutationCount <= 0) {
-			return false;
-		}
-		const indexLimit = Math.max(2, this.totalSquares);
 
-		for (let i = 0; i < mutationCount; i++) {
+		const indices = [...Array(this.population.length).keys()]
+			.sort(() => Math.random() - 0.5)
+			.slice(0, mutationCount);
+
+		for (const index of indices) {
 			if (shouldStop && shouldStop()) return true;
-			if ((i & 63) === 0) await this.sleep(0);
-			const index = Math.floor(Math.random() * this.population.length);
+
 			const chromosome = this.population[index];
 			const genes = chromosome.getSolution();
-			if (genes.length < 2) {
-				continue;
-			}
+			const size = genes.length;
 
 			for (let j = 0; j < swapsPerIndividual; j++) {
-				if (shouldStop && shouldStop()) return true;
-				if ((j & 63) === 0) await this.sleep(0);
-				const a = Math.floor(Math.random() * indexLimit);
-				let b = Math.floor(Math.random() * indexLimit);
-				while (b === a) {
-					b = Math.floor(Math.random() * indexLimit);
-				}
+				const a = Math.floor(Math.random() * size);
+				let b = Math.floor(Math.random() * size);
+				while (b === a) b = Math.floor(Math.random() * size);
+
 				[genes[a], genes[b]] = [genes[b], genes[a]];
 			}
 
 			chromosome.setSolution(genes);
 			chromosome.setScore(this.fitness(chromosome));
+
+			if ((index & 7) === 0) {
+				await this.sleep(0);
+			}
 		}
 
 		return false;
@@ -335,15 +352,13 @@ class GenerationService {
 		if (!enabled) return;
 
 		const nextPopulation: Chromosome[] = [];
+
 		for (const chromosome of this.population) {
 			if (chromosome.getAge() === -2) {
 				chromosome.setAge(lifeExpectancy);
 				nextPopulation.push(chromosome);
 			} else if (chromosome.getAge() > 0) {
 				nextPopulation.push(chromosome);
-			}else{
-				// chromosome.setScore(0);
-				// nextPopulation.push(chromosome);
 			}
 		}
 
@@ -351,15 +366,7 @@ class GenerationService {
 	}
 
 	private fitness(chromosome: Chromosome): number {
-		const genes = chromosome.getSolution();
-		return this.getLongestValidPathRange(genes).length;
-	}
-
-	private isValidKnightMove(origin: number, destination: number): boolean {
-		if (origin < 1 || origin > this.totalSquares || destination < 1 || destination > this.totalSquares) {
-			return false;
-		}
-		return this.validMoves[origin][destination];
+		return this.getValidPrefixLength(chromosome.getSolution());
 	}
 
 	private createValidMovesMatrix(): boolean[][] {
@@ -369,10 +376,13 @@ class GenerationService {
 
 		for (let origin = 1; origin <= this.totalSquares; origin++) {
 			const from = this.convertPositionToCoordinate(origin);
+
 			for (let destination = 1; destination <= this.totalSquares; destination++) {
 				const to = this.convertPositionToCoordinate(destination);
+
 				const dr = Math.abs(from.row - to.row);
 				const dc = Math.abs(from.col - to.col);
+
 				matrix[origin][destination] = (dr === 2 && dc === 1) || (dr === 1 && dc === 2);
 			}
 		}
@@ -380,76 +390,66 @@ class GenerationService {
 		return matrix;
 	}
 
-	private convertPositionToCoordinate(position: number): { row: number; col: number } {
+	private convertPositionToCoordinate(position: number) {
 		const index = position - 1;
+
 		return {
 			row: Math.floor(index / this.boardSize),
 			col: index % this.boardSize
 		};
 	}
 
-	private convertSolutionToCoordinates(solution: number[]): Array<{ row: number; col: number }> {
-		return solution.map((position) => this.convertPositionToCoordinate(position));
+	private extractValidPath(solution: number[]) {
+		const validLength = this.getValidPrefixLength(solution);
+		return solution
+			.slice(0, validLength)
+			.map((pos) => this.convertPositionToCoordinate(pos));
 	}
 
-	private getLongestValidPathRange(solution: number[]): { start: number; length: number } {
-		if (!solution || solution.length === 0) {
-			return { start: 0, length: 0 };
-		}
+	private countValidMovesScore(solution: number[]): number {
+		if (solution.length === 0) return 0;
 
-		let bestStart = 0;
-		let bestLength = 1;
-		let currentStart = 0;
-		let currentLength = 1;
+		let validMoves = 0;
 
 		for (let i = 1; i < solution.length; i++) {
 			if (this.validMoves[solution[i - 1]][solution[i]]) {
-				currentLength += 1;
+				validMoves++;
+			}
+		}
+
+		return validMoves + 1;
+	}
+
+	private getValidPrefixLength(solution: number[]): number {
+		if (solution.length === 0) return 0;
+
+		let length = 1;
+
+		for (let i = 1; i < solution.length; i++) {
+			if (this.validMoves[solution[i - 1]][solution[i]]) {
+				length++;
 			} else {
-				currentStart = i;
-				currentLength = 1;
-			}
-
-			if (currentLength > bestLength) {
-				bestLength = currentLength;
-				bestStart = currentStart;
+				break;
 			}
 		}
 
-		return { start: bestStart, length: bestLength };
-	}
-
-	private extractLongestValidPositionPath(solution: number[]): number[] {
-		const bestRange = this.getLongestValidPathRange(solution);
-		if (bestRange.length === 0) {
-			return [];
-		}
-
-		return solution.slice(bestRange.start, bestRange.start + bestRange.length);
-	}
-
-	private extractValidPath(solution: number[]): Array<{ row: number; col: number }> {
-		return this.convertSolutionToCoordinates(this.extractLongestValidPositionPath(solution));
-	}
-
-	private convertCoordinateToPosition(row: number, col: number): number {
-		return ((row - 1) * this.boardSize) + col;
+		return length;
 	}
 
 	private sortPopulation(): void {
 		this.population.sort((a, b) => {
 			const scoreDiff = b.getScore() - a.getScore();
-			if (scoreDiff !== 0) {
-				return scoreDiff;
-			}
+			if (scoreDiff !== 0) return scoreDiff;
+
+			const moveDiff = this.countValidMovesScore(b.getSolution()) - this.countValidMovesScore(a.getSolution());
+			if (moveDiff !== 0) return moveDiff;
 
 			return b.getAge() - a.getAge();
 		});
 	}
 
 	private calculateAverageFitness(): number {
-		if (this.population.length === 0) return 0;
-		const total = this.population.reduce((acc, item) => acc + item.getScore(), 0);
+		const total = this.population.reduce((acc, c) => acc + c.getScore(), 0);
 		return total / this.population.length;
 	}
 

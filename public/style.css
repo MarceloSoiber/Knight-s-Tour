@@ -584,6 +584,8 @@ h1 {
 
 .population-card {
     width: 100%;
+    margin-left: auto;
+    margin-right: auto;
     min-height: 300px;
     height: 400px;
     display: flex;
@@ -756,7 +758,30 @@ h1 {
     flex-direction: column;
     gap: 0.35rem;
     min-height: 0;
+    align-items: stretch;
     flex: 1;
+}
+
+.population-chart-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    min-height: 0;
+    flex: 1;
+}
+
+.population-chart-panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.population-chart-panel:first-child {
+    flex: 1.15;
+}
+
+.population-chart-panel-compact {
+    flex: 0.85;
 }
 
 .population-chart-caption {
@@ -768,11 +793,15 @@ h1 {
     position: relative;
     flex: 1;
     min-height: 0;
-    height: auto;
+    height: 0;
     border-radius: 10px;
     background: linear-gradient(180deg, #f8fbfd 0%, #eef6fb 100%);
     border: 1px solid #d7e6f3;
     overflow: hidden;
+}
+
+.population-chart-wrap-compact {
+    min-height: 108px;
 }
 
 .population-chart-canvas {
