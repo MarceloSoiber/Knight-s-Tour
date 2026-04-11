@@ -112,8 +112,10 @@ class GenerationService {
 				break;
 			}
 
-			// Yield the event loop every iteration to keep cancellation responsive.
-			await this.sleep(0);
+			// Yield occasionally to keep cancellation responsive without heavy overhead.
+			if ((generation & 7) === 0) {
+				await this.sleep(0);
+			}
 		}
 
 		if (this.population.length === 0) {
@@ -184,10 +186,11 @@ class GenerationService {
 		this.agePopulation(cfg.activateLifeExpectancy);
 
 		const crossoverCount = Math.floor((cfg.crossoverRate * this.population.length) / 100);
+		const limit = crossoverCount % 2 === 0 ? crossoverCount : crossoverCount - 1;
 
-		for (let i = 0; i < crossoverCount; i += 2) {
+		for (let i = 0; i < limit; i += 2) {
 			if (shouldStop()) return true;
-			if ((i & 15) === 0) await this.sleep(0);
+			if ((i & 63) === 0) await this.sleep(0);
 			const father = this.population[i];
 			const mother = this.population[i + 1];
 			const cutPoint = Math.floor(Math.random() * Math.max(1, this.totalSquares - 2));
@@ -213,7 +216,7 @@ class GenerationService {
 
 		for (let i = 0; i < limit; i += 2) {
 			if (shouldStop()) return true;
-			if ((i & 15) === 0) await this.sleep(0);
+			if ((i & 63) === 0) await this.sleep(0);
 			const fatherIndex = Math.floor(Math.random() * this.population.length);
 			const motherIndex = Math.floor(Math.random() * this.population.length);
 
@@ -294,7 +297,7 @@ class GenerationService {
 
 		for (let i = 0; i < mutationCount; i++) {
 			if (shouldStop && shouldStop()) return true;
-			if ((i & 15) === 0) await this.sleep(0);
+			if ((i & 63) === 0) await this.sleep(0);
 			const index = Math.floor(Math.random() * this.population.length);
 			const chromosome = this.population[index];
 			const genes = chromosome.getSolution();
@@ -304,7 +307,7 @@ class GenerationService {
 
 			for (let j = 0; j < swapsPerIndividual; j++) {
 				if (shouldStop && shouldStop()) return true;
-				if ((j & 15) === 0) await this.sleep(0);
+				if ((j & 63) === 0) await this.sleep(0);
 				const a = Math.floor(Math.random() * indexLimit);
 				let b = Math.floor(Math.random() * indexLimit);
 				while (b === a) {
@@ -349,7 +352,7 @@ class GenerationService {
 
 	private fitness(chromosome: Chromosome): number {
 		const genes = chromosome.getSolution();
-		return this.extractLongestValidPositionPath(genes).length;
+		return this.getLongestValidPathRange(genes).length;
 	}
 
 	private isValidKnightMove(origin: number, destination: number): boolean {
@@ -389,27 +392,40 @@ class GenerationService {
 		return solution.map((position) => this.convertPositionToCoordinate(position));
 	}
 
-	private extractLongestValidPositionPath(solution: number[]): number[] {
-		if (!solution || solution.length === 0) return [];
+	private getLongestValidPathRange(solution: number[]): { start: number; length: number } {
+		if (!solution || solution.length === 0) {
+			return { start: 0, length: 0 };
+		}
+
 		let bestStart = 0;
 		let bestLength = 1;
+		let currentStart = 0;
+		let currentLength = 1;
 
-		for (let start = 0; start < solution.length; start++) {
-			let currentLength = 1;
-			for (let i = start + 1; i < solution.length; i++) {
-				if (!this.isValidKnightMove(solution[i - 1], solution[i])) {
-					break;
-				}
+		for (let i = 1; i < solution.length; i++) {
+			if (this.validMoves[solution[i - 1]][solution[i]]) {
 				currentLength += 1;
+			} else {
+				currentStart = i;
+				currentLength = 1;
 			}
 
 			if (currentLength > bestLength) {
 				bestLength = currentLength;
-				bestStart = start;
+				bestStart = currentStart;
 			}
 		}
 
-		return solution.slice(bestStart, bestStart + bestLength);
+		return { start: bestStart, length: bestLength };
+	}
+
+	private extractLongestValidPositionPath(solution: number[]): number[] {
+		const bestRange = this.getLongestValidPathRange(solution);
+		if (bestRange.length === 0) {
+			return [];
+		}
+
+		return solution.slice(bestRange.start, bestRange.start + bestRange.length);
 	}
 
 	private extractValidPath(solution: number[]): Array<{ row: number; col: number }> {
@@ -421,7 +437,6 @@ class GenerationService {
 	}
 
 	private sortPopulation(): void {
-		// this.population.sort((a, b) => b.getScore() - a.getScore());
 		this.population.sort((a, b) => {
 			const scoreDiff = b.getScore() - a.getScore();
 			if (scoreDiff !== 0) {
