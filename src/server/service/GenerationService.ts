@@ -52,11 +52,12 @@ class GenerationService {
 		await this.initializePopulation(cfg.chromosomes, cfg.lifeExpectancy, cfg.activateLifeExpectancy, shouldStop);
 
 		if (shouldStop()) {
+			const best = this.population[0] ?? null;
 			return {
 				generationsExecuted: 0,
-				bestFitness: this.population[0]?.getScore() ?? 0,
+				bestFitness: best?.getScore() ?? 0,
 				avgFitness: this.population.length > 0 ? this.calculateAverageFitness() : 0,
-				solution: this.population.length > 0 ? this.extractValidPath(this.population[0].getSolution()) : [],
+				solution: best ? this.extractValidPath(best.getSolution()) : [],
 				stopped: true
 			};
 		}
@@ -85,22 +86,29 @@ class GenerationService {
 				break;
 			}
 
+			if (this.population.length === 0) {
+				stopped = true;
+				break;
+			}
+
 			generation++;
 
 			this.sortPopulation();
 			const best = this.population[0];
+			const bestFitness = best.getScore();
+			const avgFitness = this.calculateAverageFitness();
 
 			if (callbacks.onGeneration) {
 				callbacks.onGeneration({
 					generation,
-					bestFitness: best.getScore(),
-					avgFitness: this.calculateAverageFitness(),
+					bestFitness,
+					avgFitness,
 					chromosomeTotal: this.population.length,
 					totalGenerations: cfg.generations
 				});
 			}
 
-			if (best.getScore() === this.totalSquares) {
+			if (bestFitness === this.totalSquares) {
 				break;
 			}
 
@@ -109,13 +117,25 @@ class GenerationService {
 			}
 		}
 
+		if (this.population.length === 0) {
+			return {
+				generationsExecuted: generation,
+				bestFitness: 0,
+				avgFitness: 0,
+				solution: [],
+				stopped
+			};
+		}
+
 		this.sortPopulation();
 		const best = this.population[0];
+		const bestFitness = best.getScore();
+		const avgFitness = this.calculateAverageFitness();
 
 		return {
 			generationsExecuted: generation,
-			bestFitness: best.getScore(),
-			avgFitness: this.calculateAverageFitness(),
+			bestFitness,
+			avgFitness,
 			solution: this.extractValidPath(best.getSolution()),
 			stopped
 		};
@@ -177,32 +197,32 @@ class GenerationService {
 
 		this.agePopulation(cfg.activateLifeExpectancy);
 		this.sortPopulation();
+		if (this.population.length < 2) return false;
 
-		const selectionCount = this.getSelectionCount(cfg.selectionRate);
-		const selectionPool = this.getSelectionPool(selectionCount, cfg.processingOption);
+		const basePopulation = [...this.population];
+		const offspring: Chromosome[] = [];
+		const crossoverIndividuals = Math.floor((Math.max(0, Math.min(100, cfg.crossoverRate)) * basePopulation.length) / 100);
+		const pairCount = Math.floor(crossoverIndividuals / 2);
 
-		const elite = this.preserveElite(1);
-		const newPopulation: Chromosome[] = [...elite];
-
-		while (newPopulation.length < this.population.length) {
+		for (let i = 0; i < pairCount; i++) {
 			if (shouldStop()) return true;
 
-			const father = this.tournamentSelection(selectionPool);
-			const mother = this.tournamentSelection(selectionPool);
+			const [father, mother] = cfg.processingOption === 'elitist'
+				? this.pickElitistPair(basePopulation, i)
+				: this.pickRandomPair(basePopulation);
 
-			const [child1, child2] = this.generateOffspring(father, mother, cfg.crossoverRate);
+			const [child1, child2] = this.generateChildren(father, mother);
+			offspring.push(child1, child2);
 
-			newPopulation.push(child1);
-			if (newPopulation.length < this.population.length) {
-				newPopulation.push(child2);
-			}
-
-			if ((newPopulation.length & 15) === 0) {
+			if ((i & 15) === 0) {
 				await this.sleep(0);
 			}
 		}
 
-		this.population = newPopulation;
+		this.population = [...basePopulation, ...offspring];
+		this.selectPopulationByRate(cfg.selectionRate);
+
+		if (shouldStop()) return true;
 
 		if (await this.mutate(cfg.mutationRate, cfg.seriesPerMutation, shouldStop)) return true;
 
@@ -211,9 +231,29 @@ class GenerationService {
 		return false;
 	}
 
+	private pickElitistPair(population: Chromosome[], pairIndex: number): [Chromosome, Chromosome] {
+		const father = population[(pairIndex * 2) % population.length];
+		const mother = population[(pairIndex * 2 + 1) % population.length];
+		return [father, mother];
+	}
+
+	private pickRandomPair(population: Chromosome[]): [Chromosome, Chromosome] {
+		const father = population[Math.floor(Math.random() * population.length)];
+		const mother = population[Math.floor(Math.random() * population.length)];
+		return [father, mother];
+	}
+
 	private getSelectionCount(selectionRate: number): number {
 		const boundedRate = Math.max(1, Math.min(100, Number(selectionRate) || 50));
 		return Math.max(2, Math.floor((this.population.length * boundedRate) / 100));
+	}
+
+	private selectPopulationByRate(selectionRate: number): void {
+		if (this.population.length === 0) return;
+
+		this.sortPopulation();
+		const selectionCount = this.getSelectionCount(selectionRate);
+		this.population = this.population.slice(0, Math.min(selectionCount, this.population.length));
 	}
 
 	private getSelectionPool(selectionCount: number, mode: GenerationConfig['processingOption']): Chromosome[] {
@@ -366,7 +406,7 @@ class GenerationService {
 	}
 
 	private fitness(chromosome: Chromosome): number {
-		return this.getValidPrefixLength(chromosome.getSolution());
+		return this.getLongestValidPathRange(chromosome.getSolution()).length;
 	}
 
 	private createValidMovesMatrix(): boolean[][] {
@@ -400,9 +440,9 @@ class GenerationService {
 	}
 
 	private extractValidPath(solution: number[]) {
-		const validLength = this.getValidPrefixLength(solution);
+		const range = this.getLongestValidPathRange(solution);
 		return solution
-			.slice(0, validLength)
+			.slice(range.start, range.start + range.length)
 			.map((pos) => this.convertPositionToCoordinate(pos));
 	}
 
@@ -436,19 +476,47 @@ class GenerationService {
 		return length;
 	}
 
+	private getLongestValidPathRange(solution: number[]): { start: number; length: number } {
+		if (solution.length === 0) {
+			return { start: 0, length: 0 };
+		}
+
+		let bestStart = 0;
+		let bestLength = 1;
+		let currentStart = 0;
+		let currentLength = 1;
+
+		for (let i = 1; i < solution.length; i++) {
+			if (this.validMoves[solution[i - 1]][solution[i]]) {
+				currentLength++;
+			} else {
+				currentStart = i;
+				currentLength = 1;
+			}
+
+			if (currentLength > bestLength) {
+				bestLength = currentLength;
+				bestStart = currentStart;
+			}
+		}
+
+		return { start: bestStart, length: bestLength };
+	}
+
 	private sortPopulation(): void {
 		this.population.sort((a, b) => {
 			const scoreDiff = b.getScore() - a.getScore();
 			if (scoreDiff !== 0) return scoreDiff;
 
-			const moveDiff = this.countValidMovesScore(b.getSolution()) - this.countValidMovesScore(a.getSolution());
-			if (moveDiff !== 0) return moveDiff;
+			const prefixDiff = this.getValidPrefixLength(b.getSolution()) - this.getValidPrefixLength(a.getSolution());
+			if (prefixDiff !== 0) return prefixDiff;
 
 			return b.getAge() - a.getAge();
 		});
 	}
 
 	private calculateAverageFitness(): number {
+		if (this.population.length === 0) return 0;
 		const total = this.population.reduce((acc, c) => acc + c.getScore(), 0);
 		return total / this.population.length;
 	}

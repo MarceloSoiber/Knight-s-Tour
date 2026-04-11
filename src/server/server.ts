@@ -27,6 +27,8 @@ type GenerationProgress = {
   generation: number;
   bestFitness: number;
   avgFitness: number;
+  modelBestFitness?: number;
+  modelAvgFitness?: number;
   chromosomeTotal: number;
   totalGenerations: number;
 };
