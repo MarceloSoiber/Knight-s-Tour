@@ -131,17 +131,25 @@ class KnightsTour {
         this.controlsView.setStopEnabled(false);
 
         if (!this.currentJobId) {
-            await this.sendStopRequest();
+            const accepted = await this.sendStopRequest();
+            if (!accepted && this.isRunning) {
+                this.stopRequested = false;
+                this.controlsView.setStopEnabled(true);
+            }
             return;
         }
 
-        await this.sendStopRequest(this.currentJobId);
+        const accepted = await this.sendStopRequest(this.currentJobId);
+        if (!accepted && this.isRunning) {
+            this.stopRequested = false;
+            this.controlsView.setStopEnabled(true);
+        }
     }
 
     async sendStopRequest(jobId) {
         if (!jobId) {
             this.pendingStopRequest = true;
-            return;
+            return true;
         }
 
         try {
@@ -152,7 +160,7 @@ class KnightsTour {
 
             if (response.status === 409) {
                 this.statsView.setSaveStatus('Processing has already finished. There is no active execution to stop.', 'info');
-                return;
+                return true;
             }
 
             if (!response.ok || !payload.ok) {
@@ -160,8 +168,10 @@ class KnightsTour {
             }
 
             this.statsView.setSaveStatus('Stop request sent. Waiting for server confirmation...', 'warning');
+            return true;
         } catch (error) {
             this.statsView.setSaveStatus(error instanceof Error ? error.message : 'Error while requesting stop.', 'danger');
+            return false;
         }
     }
 
@@ -180,7 +190,11 @@ class KnightsTour {
             seriesPerMutation: parseInt(document.getElementById('seriesPerMutation').value),
             lifeExpectancy: parseInt(document.getElementById('lifeExpectancy').value),
             activateLifeExpectancy: document.getElementById('activateLifeExpectancy').checked,
-            processingOption: document.querySelector('input[name="processingOption"]:checked').value
+            processingOption: document.querySelector('input[name="processingOption"]:checked').value,
+            enablePartialRestart: document.getElementById('enablePartialRestart').checked,
+            plateauGenerations: parseInt(document.getElementById('plateauGenerations').value),
+            restartEliteCount: parseInt(document.getElementById('restartEliteCount').value),
+            restartPopulationRate: parseInt(document.getElementById('restartPopulationRate').value)
         };
     }
 

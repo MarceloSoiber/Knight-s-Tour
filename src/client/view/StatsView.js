@@ -41,7 +41,7 @@ class StatsView {
         this.scoresTableBodyEl.innerHTML = '';
 
         if (!Array.isArray(rows) || rows.length === 0) {
-            this.scoresTableBodyEl.innerHTML = '<tr><td colspan="13" class="text-center text-muted py-3">No data to display.</td></tr>';
+            this.scoresTableBodyEl.innerHTML = '<tr><td colspan="17" class="text-center text-muted py-3">No data to display.</td></tr>';
             return;
         }
 
@@ -59,7 +59,11 @@ class StatsView {
                 this.formatNumericValue(row.seriesPerMutation),
                 this.formatNumericValue(row.lifeExpectancy),
                 row.activateLifeExpectancy ? 'true' : 'false',
-                row.processingOption || '-'
+                row.processingOption || '-',
+                row.enablePartialRestart ? 'true' : 'false',
+                this.formatNumericValue(row.plateauGenerations),
+                this.formatNumericValue(row.restartEliteCount),
+                this.formatNumericValue(row.restartPopulationRate)
             ];
 
             values.forEach((value) => {

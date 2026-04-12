@@ -21,6 +21,10 @@ export type GenerationConfig = {
 	lifeExpectancy: number;
 	activateLifeExpectancy: boolean;
 	processingOption: 'elitist' | 'rotation';
+	enablePartialRestart: boolean;
+	plateauGenerations: number;
+	restartEliteCount: number;
+	restartPopulationRate: number;
 };
 
 export type GenerationResult = {
@@ -75,6 +79,10 @@ class GenerationService {
 		let generation = 0;
 		let stopped = false;
 
+		this.sortPopulation();
+		let globalBestFitness = this.population[0]?.getScore() ?? 0;
+		let plateauCounter = 0;
+
 		while (generation < cfg.generations) {
 			if (shouldStop()) {
 				stopped = true;
@@ -94,9 +102,38 @@ class GenerationService {
 			generation++;
 
 			this.sortPopulation();
-			const best = this.population[0];
-			const bestFitness = best.getScore();
-			const avgFitness = this.calculateAverageFitness();
+			let best = this.population[0];
+			let bestFitness = best.getScore();
+			let avgFitness = this.calculateAverageFitness();
+
+			if (bestFitness > globalBestFitness) {
+				globalBestFitness = bestFitness;
+				plateauCounter = 0;
+			} else {
+				plateauCounter++;
+			}
+
+			if (
+				cfg.enablePartialRestart
+				&& plateauCounter >= this.getAdaptivePlateauLimit(cfg.plateauGenerations, bestFitness)
+			) {
+				if (await this.partialRestartWithElite(cfg, shouldStop)) {
+					stopped = true;
+					break;
+				}
+				plateauCounter = 0;
+
+				if (this.population.length === 0) {
+					stopped = true;
+					break;
+				}
+
+				this.sortPopulation();
+				best = this.population[0];
+				bestFitness = best.getScore();
+				avgFitness = this.calculateAverageFitness();
+				globalBestFitness = Math.max(globalBestFitness, bestFitness);
+			}
 
 			if (callbacks.onGeneration) {
 				callbacks.onGeneration({
@@ -151,7 +188,11 @@ class GenerationService {
 			seriesPerMutation: config.seriesPerMutation ?? 5,
 			lifeExpectancy: config.lifeExpectancy ?? 15,
 			activateLifeExpectancy: config.activateLifeExpectancy ?? false,
-			processingOption: config.processingOption === 'elitist' ? 'elitist' : 'rotation'
+			processingOption: config.processingOption === 'elitist' ? 'elitist' : 'rotation',
+			enablePartialRestart: config.enablePartialRestart ?? false,
+			plateauGenerations: Math.max(1, config.plateauGenerations ?? 20),
+			restartEliteCount: Math.max(1, config.restartEliteCount ?? 2),
+			restartPopulationRate: Math.max(1, Math.min(100, config.restartPopulationRate ?? 70))
 		};
 	}
 
@@ -228,6 +269,49 @@ class GenerationService {
 
 		this.applyLifeExpectancy(cfg.lifeExpectancy, cfg.activateLifeExpectancy);
 
+		return false;
+	}
+
+	private async partialRestartWithElite(cfg: GenerationConfig, shouldStop?: () => boolean): Promise<boolean> {
+		if (this.population.length === 0) return false;
+		if (shouldStop && shouldStop()) return true;
+
+		this.sortPopulation();
+
+		const eliteCount = Math.max(1, Math.min(cfg.restartEliteCount, this.population.length));
+		const nonEliteCount = Math.max(0, this.population.length - eliteCount);
+		if (nonEliteCount === 0) return false;
+
+		const restartCount = Math.max(
+			1,
+			Math.floor((nonEliteCount * Math.max(1, Math.min(100, cfg.restartPopulationRate))) / 100)
+		);
+		const survivorsCount = Math.max(0, nonEliteCount - restartCount);
+
+		const elites = this.population.slice(0, eliteCount);
+		const nonElites = this.population.slice(eliteCount);
+		const survivors = nonElites
+			.sort(() => Math.random() - 0.5)
+			.slice(0, survivorsCount);
+		const newcomers: Chromosome[] = [];
+
+		for (let i = 0; i < restartCount; i++) {
+			if (shouldStop && shouldStop()) return true;
+
+			const genes = this.createRandomGenes();
+			const chromosome = new Chromosome(-2);
+			chromosome.setSolution(genes);
+			chromosome.setScore(this.fitness(chromosome));
+			newcomers.push(chromosome);
+
+			if ((i & 15) === 0) {
+				await this.sleep(0);
+			}
+		}
+
+		this.population = [...elites, ...survivors, ...newcomers];
+		this.applyLifeExpectancy(cfg.lifeExpectancy, cfg.activateLifeExpectancy);
+		this.sortPopulation();
 		return false;
 	}
 
@@ -519,6 +603,13 @@ class GenerationService {
 		if (this.population.length === 0) return 0;
 		const total = this.population.reduce((acc, c) => acc + c.getScore(), 0);
 		return total / this.population.length;
+	}
+
+	private getAdaptivePlateauLimit(basePlateau: number, bestFitness: number): number {
+		const safeBase = Math.max(1, basePlateau);
+		const progress = Math.max(0, Math.min(1, bestFitness / this.totalSquares));
+		const extra = Math.floor(safeBase * (1 - progress) * 2);
+		return safeBase + extra;
 	}
 
 	private sleep(ms: number): Promise<void> {

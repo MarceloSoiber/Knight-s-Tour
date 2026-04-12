@@ -1124,6 +1124,100 @@ h1 {
     padding: 0.5rem 0.55rem;
 }
 
+.compact-config .form-label {
+    font-size: 0.67rem;
+    margin-bottom: 0.06rem;
+    line-height: 1.1;
+}
+
+.compact-config .form-control,
+.compact-config .form-select {
+    height: 28px;
+    padding: 0.16rem 0.3rem;
+    font-size: 0.72rem;
+}
+
+.compact-config .config-grid {
+    gap: 0.3rem 0.45rem;
+}
+
+.compact-config .restart-grid {
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.05fr) minmax(0, 1.25fr);
+    gap: 0.24rem 0.4rem;
+}
+
+.compact-config .restart-grid .config-field {
+    display: flex;
+    flex-direction: column;
+}
+
+.compact-config .restart-grid .form-label {
+    min-height: 1.45rem;
+    display: flex;
+    align-items: flex-end;
+    margin-bottom: 0.04rem;
+}
+
+.compact-config .form-check-label {
+    font-size: 0.64rem;
+    line-height: 1.1;
+}
+
+.compact-config .life-row .form-check,
+.compact-config .processing-row .form-check,
+.compact-config .config-options-row .form-check {
+    padding-top: 0.15rem;
+    padding-bottom: 0.15rem;
+}
+
+.compact-config .options-title {
+    font-size: 0.62rem;
+    letter-spacing: 0.3px;
+}
+
+.compact-config #configForm .mb-2 {
+    margin-bottom: 0.24rem !important;
+}
+
+.compact-config #configForm .mb-3 {
+    margin-bottom: 0.24rem !important;
+}
+
+.compact-config #configForm {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 0.28rem;
+}
+
+.compact-config #configForm .action-buttons {
+    margin-top: 0;
+    padding-top: 0.1rem;
+    gap: 0.24rem !important;
+}
+
+.compact-config #configForm .config-grid,
+.compact-config #configForm .config-options-row {
+    margin-bottom: 0 !important;
+}
+
+.compact-config #configForm .action-buttons .btn {
+    min-height: 42px;
+    font-size: 0.85rem;
+    padding: 0.5rem 0.45rem;
+}
+
+.compact-config #configForm .action-buttons .btn i {
+    font-size: 0.85rem;
+}
+
+@media (max-width: 1200px) {
+    .compact-config .restart-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
 .stats-grid h3,
 .stats-grid h6 {
     line-height: 1.2;

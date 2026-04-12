@@ -18,7 +18,7 @@ This separation keeps UI concerns isolated from processing and data persistence.
 
 ## How It Works
 
-The algorithm works with a population of chromosomes, where each chromosome represents a sequence of board positions. Each sequence is evaluated based on the number of valid knight moves.
+The algorithm works with a population of chromosomes, where each chromosome represents a sequence of board positions. Each sequence is evaluated by the length of the longest valid knight-move path found in the chromosome.
 
 At each generation, the system:
 
@@ -27,7 +27,8 @@ At each generation, the system:
 3. Applies crossover between parents to generate new chromosomes.
 4. Performs mutations to explore new combinations.
 5. Applies life-span rules when that option is enabled.
-6. Updates the interface statistics and continues until the generation limit is reached or a full path is found.
+6. Detects stagnation and can trigger a partial restart with elite preservation.
+7. Updates the interface statistics and continues until the generation limit is reached or a full path is found.
 
 Generation processing runs as an asynchronous backend job. The client creates a job, subscribes to server-sent events for progress updates, and can request cancellation while processing is running.
 
@@ -35,6 +36,8 @@ The search behavior changes depending on the selected processing mode:
 
 - Elitist: prioritizes the best-ranked individuals.
 - Roulette: performs a more random selection, which increases population diversity.
+
+The plateau recovery strategy preserves the strongest individuals and injects new random chromosomes when the search stops improving for too long.
 
 ## Interface
 
@@ -56,6 +59,23 @@ The playback controls allow you to adjust speed, pause, advance, and rewind the 
 - Mutation: percentage of individuals that undergo changes.
 - Mutation series: number of swaps applied to each mutated individual.
 - Life expectancy: how long individuals remain alive, when the rule is enabled.
+- Enable partial restart: enables or disables the anti-plateau recovery strategy.
+- Plateau generations: number of consecutive generations without improvement before recovery is triggered.
+- Restart elite count: number of top individuals preserved during recovery.
+- Restart population rate: percentage of the non-elite population replaced by random newcomers during recovery.
+
+## Anti-Plateau Strategy
+
+When partial restart is enabled, the algorithm monitors the best fitness across generations.
+
+- If best fitness improves, the stagnation counter is reset.
+- If best fitness does not improve, the stagnation counter increases.
+- When the counter reaches Plateau generations, a partial restart is executed.
+- The top Restart elite count individuals are preserved.
+- A fraction of the remaining population is replaced according to Restart population rate.
+- New random individuals are evaluated and merged back into the population.
+
+This strategy helps escape local optima while preserving the strongest candidates already found.
 
 ## How to Run
 
@@ -95,6 +115,26 @@ The generation flow is job-based:
 4. `DELETE /api/generate/jobs/:id`: requests stop for a running job.
 
 Possible job statuses: `running`, `completed`, `stopped`, `failed`.
+
+## Example Generation Job Payload
+
+```json
+{
+	"generations": 1000,
+	"chromosomes": 15000,
+	"selectionRate": 50,
+	"crossoverRate": 100,
+	"mutationRate": 10,
+	"seriesPerMutation": 12,
+	"lifeExpectancy": 15,
+	"activateLifeExpectancy": false,
+	"processingOption": "elitist",
+	"enablePartialRestart": true,
+	"plateauGenerations": 20,
+	"restartEliteCount": 2,
+	"restartPopulationRate": 70
+}
+```
 
 ## Project Structure
 
@@ -137,4 +177,5 @@ project-root/
 - The best path found may not always be a complete 64-square solution, but the interface clearly shows how far the search progressed.
 - The displayed solution path updates in real time during the animation.
 - Stop requests are cooperative: the job receives a cancellation flag and ends as soon as the current processing checkpoints are reached.
-   
+- The partial restart strategy is disabled by default and can be tuned from the settings panel.
+

@@ -21,6 +21,10 @@ class Score {
         this.lifeExpectancy = Number(configForm.lifeExpectancy) || 0;
         this.activateLifeExpectancy = Boolean(configForm.activateLifeExpectancy);
         this.processingOption = configForm.processingOption || 'rotation';
+        this.enablePartialRestart = Boolean(configForm.enablePartialRestart);
+        this.plateauGenerations = Number(configForm.plateauGenerations) || 0;
+        this.restartEliteCount = Number(configForm.restartEliteCount) || 0;
+        this.restartPopulationRate = Number(configForm.restartPopulationRate) || 0;
     }
 
     getId() {
@@ -143,6 +147,38 @@ class Score {
         this.processingOption = processingOption || 'rotation';
     }
 
+    getEnablePartialRestart() {
+        return this.enablePartialRestart;
+    }
+
+    setEnablePartialRestart(enablePartialRestart) {
+        this.enablePartialRestart = Boolean(enablePartialRestart);
+    }
+
+    getPlateauGenerations() {
+        return this.plateauGenerations;
+    }
+
+    setPlateauGenerations(plateauGenerations) {
+        this.plateauGenerations = Number(plateauGenerations) || 0;
+    }
+
+    getRestartEliteCount() {
+        return this.restartEliteCount;
+    }
+
+    setRestartEliteCount(restartEliteCount) {
+        this.restartEliteCount = Number(restartEliteCount) || 0;
+    }
+
+    getRestartPopulationRate() {
+        return this.restartPopulationRate;
+    }
+
+    setRestartPopulationRate(restartPopulationRate) {
+        this.restartPopulationRate = Number(restartPopulationRate) || 0;
+    }
+
     toJSON() {
         return {
             id: this.id,
@@ -159,7 +195,11 @@ class Score {
             seriesPerMutation: this.seriesPerMutation,
             lifeExpectancy: this.lifeExpectancy,
             activateLifeExpectancy: this.activateLifeExpectancy,
-            processingOption: this.processingOption
+            processingOption: this.processingOption,
+            enablePartialRestart: this.enablePartialRestart,
+            plateauGenerations: this.plateauGenerations,
+            restartEliteCount: this.restartEliteCount,
+            restartPopulationRate: this.restartPopulationRate
         };
     }
 }

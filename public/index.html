@@ -85,6 +85,30 @@
                                     </div>
                                 </div>
 
+                                <div class="config-options-row mb-2">
+                                    <div class="form-check mb-0 compact-check">
+                                        <input class="form-check-input" type="checkbox" id="enablePartialRestart">
+                                        <label class="form-check-label" for="enablePartialRestart">
+                                            Enable partial restart (anti-plateau)
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="config-grid restart-grid mb-3">
+                                    <div class="config-field">
+                                        <label for="plateauGenerations" class="form-label">Plateau Generations</label>
+                                        <input type="number" class="form-control" id="plateauGenerations" value="20" min="1" required>
+                                    </div>
+                                    <div class="config-field">
+                                        <label for="restartEliteCount" class="form-label">Restart Elite Count</label>
+                                        <input type="number" class="form-control" id="restartEliteCount" value="2" min="1" required>
+                                    </div>
+                                    <div class="config-field">
+                                        <label for="restartPopulationRate" class="form-label">Restart Population (%)</label>
+                                        <input type="number" class="form-control" id="restartPopulationRate" value="70" min="1" max="100" required>
+                                    </div>
+                                </div>
+
                                 <div class="d-grid gap-2 action-buttons">
                                     <button type="button" class="btn btn-success btn-lg" id="startBtn">
                                         <i class="bi bi-play-circle"></i> Start
@@ -294,12 +318,16 @@
                                             <th scope="col">Life Expectancy</th>
                                             <th scope="col">Enable Life Expectancy</th>
                                             <th scope="col">Processing Option</th>
+                                            <th scope="col">Partial Restart</th>
+                                            <th scope="col">Plateau Gen</th>
+                                            <th scope="col">Elite Count</th>
+                                            <th scope="col">Restart Rate (%)</th>
                                             <th scope="col">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody id="scoresTableBody">
                                         <tr>
-                                            <td colspan="13" class="text-center text-muted py-3">No data to display.</td>
+                                            <td colspan="17" class="text-center text-muted py-3">No data to display.</td>
                                         </tr>
                                     </tbody>
                                 </table>
