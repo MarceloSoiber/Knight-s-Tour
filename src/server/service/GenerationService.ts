@@ -17,6 +17,8 @@ export type GenerationConfig = {
 	selectionRate: number;
 	crossoverRate: number;
 	mutationRate: number;
+	enableAdaptiveMutationOnPlateau: boolean;
+	plateauMutationRate: number;
 	seriesPerMutation: number;
 	lifeExpectancy: number;
 	activateLifeExpectancy: boolean;
@@ -86,6 +88,7 @@ class GenerationService {
 		this.sortPopulation();
 		let lastBestFitness = this.getBestChromosomeByScore()?.getScore() ?? 0;
 		let plateauCounter = 0;
+		let currentMutationRate = cfg.mutationRate;
 
 		while (generation < cfg.generations) {
 			if (shouldStop()) {
@@ -93,7 +96,7 @@ class GenerationService {
 				break;
 			}
 
-			if (await this.generateGeneration(cfg, shouldStop)) {
+			if (await this.generateGeneration(cfg, shouldStop, currentMutationRate)) {
 				stopped = true;
 				break;
 			}
@@ -114,17 +117,25 @@ class GenerationService {
 			} else {
 				lastBestFitness = bestFitness;
 				plateauCounter = 0;
+				currentMutationRate = cfg.mutationRate;
+			}
+
+			const reachedPlateau = plateauCounter > this.getAdaptivePlateauLimit(cfg.plateauGenerations, bestFitness);
+
+			if (cfg.enableAdaptiveMutationOnPlateau && reachedPlateau) {
+				currentMutationRate = Math.max(cfg.mutationRate, cfg.plateauMutationRate);
 			}
 
 			if (
 				cfg.enablePartialRestart
-				&& plateauCounter > this.getAdaptivePlateauLimit(cfg.plateauGenerations, bestFitness)
+				&& reachedPlateau
 			) {
 				if (await this.partialRestartWithElite(cfg, shouldStop)) {
 					stopped = true;
 					break;
 				}
 				plateauCounter = 0;
+				currentMutationRate = cfg.mutationRate;
 
 				if (this.population.length === 0) {
 					stopped = true;
@@ -206,6 +217,8 @@ class GenerationService {
 			selectionRate: config.selectionRate ?? 50,
 			crossoverRate: config.crossoverRate ?? 100,
 			mutationRate: config.mutationRate ?? 5,
+			enableAdaptiveMutationOnPlateau: config.enableAdaptiveMutationOnPlateau ?? false,
+			plateauMutationRate: Math.max(0, Math.min(100, config.plateauMutationRate ?? 15)),
 			seriesPerMutation: config.seriesPerMutation ?? 5,
 			lifeExpectancy: config.lifeExpectancy ?? 15,
 			activateLifeExpectancy: config.activateLifeExpectancy ?? false,
@@ -254,8 +267,17 @@ class GenerationService {
 		return genes;
 	}
 
-	private async generateGeneration(cfg: GenerationConfig, shouldStop: () => boolean): Promise<boolean> {
+	private async generateGeneration(
+		cfg: GenerationConfig,
+		shouldStop: () => boolean,
+		mutationRateOverride?: number
+	): Promise<boolean> {
 		if (shouldStop()) return true;
+
+		const effectiveMutationRate = Math.max(
+			0,
+			Math.min(100, Number(mutationRateOverride ?? cfg.mutationRate) || 0)
+		);
 
 		this.agePopulation(cfg.activateLifeExpectancy);
 		this.sortPopulation();
@@ -296,7 +318,7 @@ class GenerationService {
 
 		if (shouldStop()) return true;
 
-		if (await this.mutate(cfg.mutationRate, cfg.seriesPerMutation, shouldStop)) return true;
+				if (await this.mutate(effectiveMutationRate, cfg.seriesPerMutation, shouldStop)) return true;
 
 		this.applyLifeExpectancy(cfg.lifeExpectancy, cfg.activateLifeExpectancy);
 		await this.replenishPopulation(targetPopulationSize, shouldStop);
