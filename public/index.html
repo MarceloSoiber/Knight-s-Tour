@@ -72,10 +72,6 @@
                         <label class="form-check-label" for="rotation">Roulette</label>
                     </div>
                 </div>
-                <div class="form-check mb-2">
-                    <input class="form-check-input" type="checkbox" id="enablePartialRestart">
-                    <label class="form-check-label small" for="enablePartialRestart">Partial Restart (Anti-plateau)</label>
-                </div>
             </div>
 
             <div class="mb-4 border-top border-secondary pt-3 adaptive-mutation-panel">
@@ -92,24 +88,27 @@
                             <label for="plateauMutationRate" class="form-label x-small">Mutation %</label>
                             <input type="number" class="form-control form-control-sm" id="plateauMutationRate" value="15" disabled>
                         </div>
+                    </div>
+                </div>
+                <div class="adaptive-restart-group">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="enablePartialRestart">
+                        <label class="form-check-label small" for="enablePartialRestart">Enable Partial Restart (Anti-plateau)</label>
+                    </div>
+                    <div class="row g-2 adaptive-mutation-grid">
                         <div class="col-6">
                             <label for="plateauGenerations" class="form-label x-small">Plateau Gen</label>
                             <input type="number" class="form-control form-control-sm" id="plateauGenerations" value="20" disabled>
                         </div>
+                        <div class="col-6">
+                            <label for="restartEliteCount" class="form-label x-small">Elite Count</label>
+                            <input type="number" class="form-control form-control-sm" id="restartEliteCount" value="2" disabled>
+                        </div>
+                        <div class="col-6">
+                            <label for="restartPopulationRate" class="form-label x-small">Restart Pop %</label>
+                            <input type="number" class="form-control form-control-sm" id="restartPopulationRate" value="70" disabled>
+                        </div>
                     </div>
-                </div>
-                <div class="adaptive-restart-group">
-                    <div class="x-small text-secondary fw-bold text-uppercase mb-2">Restart Settings</div>
-                    <div class="row g-2 adaptive-mutation-grid">
-                    <div class="col-6">
-                        <label for="restartEliteCount" class="form-label x-small">Elite Count</label>
-                        <input type="number" class="form-control form-control-sm" id="restartEliteCount" value="2">
-                    </div>
-                    <div class="col-6">
-                        <label for="restartPopulationRate" class="form-label x-small">Restart Pop %</label>
-                        <input type="number" class="form-control form-control-sm" id="restartPopulationRate" value="70">
-                    </div>
-                </div>
                 </div>
             </div>
 
@@ -193,8 +192,17 @@
                     <div class="card-header bg-transparent border-secondary d-flex justify-content-between align-items-center">
                         <span class="fw-bold"><i class="bi bi-grid-3x2 me-2"></i>Knight Path</span>
                         <div class="d-flex align-items-center gap-2">
-                            <label class="x-small text-secondary">Speed</label>
-                            <input type="range" id="animationSpeed" class="form-range" style="width: 100px" min="0" max="3" step="1" value="2">
+                            <div class="speed-control">
+                                <!-- <div class="d-flex align-items-center justify-content-between">
+                                    <label for="animationSpeed" class="x-small text-secondary mb-0">Speed</label>
+                                    <span id="animationSpeedValue" class="x-small text-secondary fw-bold">Normal (300ms)</span>
+                                </div> -->
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="x-small text-secondary">Slow</span>
+                                    <input type="range" id="animationSpeed" class="form-range" min="0" max="3" step="1" value="2">
+                                    <span class="x-small text-secondary">Fast</span>
+                                </div>
+                            </div>
                             <button id="prevStepBtn" class="btn btn-sm btn-outline-light" title="Previous" aria-label="Previous">
                                 <i class="bi bi-skip-backward-fill"></i>
                             </button>

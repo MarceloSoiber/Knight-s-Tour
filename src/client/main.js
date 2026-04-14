@@ -36,6 +36,7 @@ class KnightsTour {
         this.currentJobId = null;
         this.eventSource = null;
         this.animationSpeedPresets = [700, 450, 300, 150];
+        this.animationSpeedLabels = ['Slow', 'Medium', 'Normal', 'Fast'];
         this.boardView = new BoardView(this.boardSize);
         this.statsView = new StatsView();
         this.populationChartView = new PopulationChartView();
@@ -114,6 +115,7 @@ class KnightsTour {
 
         this.syncAnimationSpeedFromSlider();
         this.bindAdaptiveMutationControls();
+        this.bindPartialRestartControls();
         this.controlsView.setControlsEnabled(false);
         this.controlsView.setPauseButton(this.isAnimationPaused);
         this.controlsView.setStopEnabled(false);
@@ -122,12 +124,28 @@ class KnightsTour {
     bindAdaptiveMutationControls() {
         const toggle = document.getElementById('enableAdaptiveMutationOnPlateau');
         const mutationInput = document.getElementById('plateauMutationRate');
-        const plateauInput = document.getElementById('plateauGenerations');
-        if (!toggle || !mutationInput || !plateauInput) return;
+        if (!toggle || !mutationInput) return;
 
         const syncFieldState = () => {
             mutationInput.disabled = !toggle.checked;
-            plateauInput.disabled = !toggle.checked;
+        };
+
+        toggle.addEventListener('change', syncFieldState);
+        syncFieldState();
+    }
+
+    bindPartialRestartControls() {
+        const toggle = document.getElementById('enablePartialRestart');
+        const plateauInput = document.getElementById('plateauGenerations');
+        const eliteInput = document.getElementById('restartEliteCount');
+        const populationRateInput = document.getElementById('restartPopulationRate');
+        if (!toggle || !plateauInput || !eliteInput || !populationRateInput) return;
+
+        const syncFieldState = () => {
+            const enabled = toggle.checked;
+            plateauInput.disabled = !enabled;
+            eliteInput.disabled = !enabled;
+            populationRateInput.disabled = !enabled;
         };
 
         toggle.addEventListener('change', syncFieldState);
@@ -195,6 +213,8 @@ class KnightsTour {
     syncAnimationSpeedFromSlider() {
         const index = Math.max(0, Math.min(this.animationSpeedPresets.length - 1, this.controlsView.getSpeedIndex()));
         this.animationSpeedMs = this.animationSpeedPresets[index];
+        const label = this.animationSpeedLabels[index] || 'Normal';
+        this.controlsView.setSpeedValueLabel(`${label} (${this.animationSpeedMs}ms)`);
     }
 
     getFormValues() {
