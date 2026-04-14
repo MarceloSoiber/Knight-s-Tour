@@ -318,7 +318,7 @@ class GenerationService {
 
 		if (shouldStop()) return true;
 
-				if (await this.mutate(effectiveMutationRate, cfg.seriesPerMutation, shouldStop)) return true;
+		if (await this.mutate(effectiveMutationRate, cfg.seriesPerMutation, shouldStop)) return true;
 
 		this.applyLifeExpectancy(cfg.lifeExpectancy, cfg.activateLifeExpectancy);
 		await this.replenishPopulation(targetPopulationSize, shouldStop);
@@ -490,29 +490,30 @@ class GenerationService {
 	private crossOX(parent1: number[], parent2: number[]): number[] {
 		const size = parent1.length;
 		const child = new Array<number>(size).fill(-1);
-		const used = new Set<number>();
 
 		let start = Math.floor(Math.random() * size);
 		let end = Math.floor(Math.random() * size);
-
 		if (start > end) [start, end] = [end, start];
 
+		const used = new Set<number>();
 		for (let i = start; i <= end; i++) {
 			child[i] = parent1[i];
 			used.add(parent1[i]);
 		}
 
-		let p2Index = 0;
+		let currentChildIdx = (end + 1) % size;
+		let currentParentIdx = (end + 1) % size;
 
-		for (let i = 0; i < size; i++) {
-			if (child[i] !== -1) continue;
+		for (let count = 0; count < size; count++) {
+			const itemP2 = parent2[currentParentIdx];
 
-			while (used.has(parent2[p2Index])) {
-				p2Index++;
+			if (!used.has(itemP2)) {
+				child[currentChildIdx] = itemP2;
+				currentChildIdx = (currentChildIdx + 1) % size;
+				used.add(itemP2);
 			}
 
-			child[i] = parent2[p2Index++];
-			used.add(child[i]);
+			currentParentIdx = (currentParentIdx + 1) % size;
 		}
 
 		return child;
@@ -616,7 +617,7 @@ class GenerationService {
 	// 	return this.getLongestValidPathRange(chromosome.getSolution()).length;
 	// }
 
-// --------------  Score Básico + Média de Opções --------------
+	// --------------  Score Básico + Média de Opções --------------
 	// private fitness(chromosome: Chromosome): number {
 	// 	const range = this.getLongestValidPathRange(chromosome.getSolution());
 	// 	const pathLength = range.length;
@@ -634,25 +635,25 @@ class GenerationService {
 	// }
 
 
-// ----------------------------- Penalizar Becos Sem Saída Forte (Mais agressivo)
+	// ----------------------------- Penalizar Becos Sem Saída Forte (Mais agressivo)
 
-// private fitness(chromosome: Chromosome): number {
-//     const range = this.getLongestValidPathRange(chromosome.getSolution());
-//     const pathLength = range.length;
-//     const lastPositionInPath = chromosome.getSolution()[range.start + pathLength - 1];
-    
-//     // Contar opções da última posição
-//     const lastPositionOptions = this.countValidMovesFrom(lastPositionInPath, -1);
-    
-//     // Se chegou num beco sem saída (-1 saída), grande penalidade
-//     // Se tem opções, bônus proporcional
-//     const terminationBonus = lastPositionOptions > 0 ? lastPositionOptions * 3 : -5;
-    
-//     return pathLength * 10 + terminationBonus;
-// }
+	// private fitness(chromosome: Chromosome): number {
+	//     const range = this.getLongestValidPathRange(chromosome.getSolution());
+	//     const pathLength = range.length;
+	//     const lastPositionInPath = chromosome.getSolution()[range.start + pathLength - 1];
+
+	//     // Contar opções da última posição
+	//     const lastPositionOptions = this.countValidMovesFrom(lastPositionInPath, -1);
+
+	//     // Se chegou num beco sem saída (-1 saída), grande penalidade
+	//     // Se tem opções, bônus proporcional
+	//     const terminationBonus = lastPositionOptions > 0 ? lastPositionOptions * 3 : -5;
+
+	//     return pathLength * 10 + terminationBonus;
+	// }
 
 
-// ------------------------------ Score Estratificado com Depth (Mais sofisticado)-------------------------------
+	// ------------------------------ Score Estratificado com Depth (Mais sofisticado)-------------------------------
 	private evaluateChromosome(chromosome: Chromosome): void {
 		const [score, fitness] = this.fitness(chromosome);
 		chromosome.setScore(score);
@@ -675,7 +676,7 @@ class GenerationService {
 		const fitness = score * 10 + weightedOptions * 1.5;
 		return [score, fitness];
 	}
-//------------------------------ Score com Média de Opções ao Longo do Caminho (Balanceado) -------------------------------
+	//------------------------------ Score com Média de Opções ao Longo do Caminho (Balanceado) -------------------------------
 
 	private getAverageOptionsInPath(solution: number[], start: number, length: number): number {
 		if (length <= 1) return 0;
@@ -700,7 +701,7 @@ class GenerationService {
 		return count;
 	}
 
-//-------------------------------------------------------------
+	//-------------------------------------------------------------
 
 	private createValidMovesMatrix(): boolean[][] {
 		const matrix = Array.from({ length: this.totalSquares + 1 }, () =>
