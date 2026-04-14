@@ -43,7 +43,6 @@ class KnightsTour {
 
         this.deleteScoreModalEl = document.getElementById('deleteScoreModal');
         this.deleteScoreModalMessageEl = document.getElementById('deleteScoreModalMessage');
-        this.deleteScoreCancelBtn = document.getElementById('deleteScoreCancelBtn');
         this.deleteScoreConfirmBtn = document.getElementById('deleteScoreConfirmBtn');
 
         this.boardView.initializeBoard();
@@ -93,28 +92,46 @@ class KnightsTour {
             });
         }
 
-        if (this.deleteScoreCancelBtn) {
-            this.deleteScoreCancelBtn.addEventListener('click', () => this.closeDeleteScoreModal());
-        }
+        const deleteScoreDismissButtons = document.querySelectorAll('#deleteScoreModal [data-bs-dismiss="modal"]');
+        deleteScoreDismissButtons.forEach((button) => {
+            button.addEventListener('click', () => this.closeDeleteScoreModal());
+        });
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.deleteScoreModalEl?.classList.contains('is-visible')) {
+                this.closeDeleteScoreModal();
+            }
+        });
 
         if (this.deleteScoreModalEl) {
             this.deleteScoreModalEl.addEventListener('click', (event) => {
-                if (event.target?.dataset?.modalClose !== undefined) {
+                if (event.target === this.deleteScoreModalEl) {
                     this.closeDeleteScoreModal();
                 }
             });
         }
 
-        document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape' && this.deleteScoreModalEl?.classList.contains('is-visible')) {
-                this.closeDeleteScoreModal();
-            }
-        });
-
         this.syncAnimationSpeedFromSlider();
+        this.bindAdaptiveMutationControls();
         this.controlsView.setControlsEnabled(false);
         this.controlsView.setPauseButton(this.isAnimationPaused);
         this.controlsView.setStopEnabled(false);
+    }
+
+    bindAdaptiveMutationControls() {
+        const toggle = document.getElementById('enableAdaptiveMutationOnPlateau');
+        const mutationInput = document.getElementById('plateauMutationRate');
+        const plateauInput = document.getElementById('plateauGenerations');
+        if (!toggle || !mutationInput || !plateauInput) return;
+
+        const syncFieldState = () => {
+            mutationInput.disabled = !toggle.checked;
+            plateauInput.disabled = !toggle.checked;
+        };
+
+        toggle.addEventListener('change', syncFieldState);
+        syncFieldState();
     }
 
     async requestStop() {
@@ -192,7 +209,9 @@ class KnightsTour {
             activateLifeExpectancy: document.getElementById('activateLifeExpectancy').checked,
             processingOption: document.querySelector('input[name="processingOption"]:checked').value,
             enablePartialRestart: document.getElementById('enablePartialRestart').checked,
+            enableAdaptiveMutationOnPlateau: document.getElementById('enableAdaptiveMutationOnPlateau').checked,
             plateauGenerations: parseInt(document.getElementById('plateauGenerations').value),
+            plateauMutationRate: parseInt(document.getElementById('plateauMutationRate').value),
             restartEliteCount: parseInt(document.getElementById('restartEliteCount').value),
             restartPopulationRate: parseInt(document.getElementById('restartPopulationRate').value)
         };

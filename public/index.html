@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,362 +8,287 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link rel="stylesheet" href="/public/style.css">
 </head>
+<body class="bg-dark text-white">
 
-<body>
-    <div class="container-fluid app-shell mt-8 mb-8">
-        <h1 class="text-center text-white app-title mb-8">
-            <i class="bi bi-horse"></i> Knight's Tour - Genetic Algorithm
-        </h1>
+    <aside class="sidebar shadow-lg border-end border-secondary">
+        <div class="p-3 border-bottom border-secondary">
+            <h4 class="mb-0 text-primary"><i class="bi bi-horse me-2"></i>Knight's Tour</h4>
+        </div>
+        
+        <form id="configForm" class="p-3">
+            <div class="mb-4">
+                <h6 class="text-uppercase small fw-bold text-secondary mb-3">General Settings</h6>
+                <div class="row g-2">
+                    <div class="col-6">
+                        <label for="generations" class="form-label small">Generations</label>
+                        <input type="number" class="form-control form-control-sm" id="generations" value="1000">
+                    </div>
+                    <div class="col-6">
+                        <label for="chromosomes" class="form-label small">Chromosomes</label>
+                        <input type="number" class="form-control form-control-sm" id="chromosomes" value="15000">
+                    </div>
+                    <div class="col-6">
+                        <label for="selectionRate" class="form-label small">Selection %</label>
+                        <input type="number" class="form-control form-control-sm" id="selectionRate" value="50">
+                    </div>
+                    <div class="col-6">
+                        <label for="crossoverRate" class="form-label small">Crossover %</label>
+                        <input type="number" class="form-control form-control-sm" id="crossoverRate" value="100">
+                    </div>
+                </div>
+            </div>
 
-        <div class="app-main-row">
-            <div class="row g-3 app-main-split">
-                <div class="col-lg-3 left-stack">
-                    <div class="card shadow-lg config-card top-card compact-config">
-                        <div class="card-header bg-primary text-white">
-                            <h4 class="mb-0">
-                                <i class="bi bi-gear"></i> Settings
-                            </h4>
+            <div class="mb-4 p-2 rounded border border-secondary mutation-config-panel">
+                <h6 class="text-uppercase small fw-bold text-secondary mb-2">Base Mutation</h6>
+                <div class="row g-2">
+                    <div class="col-6">
+                        <label for="mutationRate" class="form-label small">Mutation %</label>
+                        <input type="number" class="form-control form-control-sm" id="mutationRate" value="10">
+                    </div>
+                    <div class="col-6">
+                        <label for="seriesPerMutation" class="form-label small">Series</label>
+                        <input type="number" class="form-control form-control-sm" id="seriesPerMutation" value="12">
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-4 p-2 rounded bg-black bg-opacity-25 border border-secondary">
+                <div class="form-check form-switch mb-2">
+                    <input class="form-check-input" type="checkbox" id="activateLifeExpectancy">
+                    <label class="form-check-label small" for="activateLifeExpectancy">Life Expectancy</label>
+                </div>
+                <input type="number" class="form-control form-control-sm" id="lifeExpectancy" value="15">
+            </div>
+
+            <div class="mb-4">
+                <h6 class="text-uppercase small fw-bold text-secondary mb-2">Processing</h6>
+                <div class="d-flex gap-3 mb-2">
+                    <div class="form-check small">
+                        <input class="form-check-input" type="radio" name="processingOption" id="elitist" value="elitist" checked>
+                        <label class="form-check-label" for="elitist">Elitist</label>
+                    </div>
+                    <div class="form-check small">
+                        <input class="form-check-input" type="radio" name="processingOption" id="rotation" value="rotation">
+                        <label class="form-check-label" for="rotation">Roulette</label>
+                    </div>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="enablePartialRestart">
+                    <label class="form-check-label small" for="enablePartialRestart">Partial Restart (Anti-plateau)</label>
+                </div>
+            </div>
+
+            <div class="mb-4 border-top border-secondary pt-3 adaptive-mutation-panel">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <h6 class="text-uppercase x-small fw-bold text-secondary mb-0">Plateau Recovery (Adaptive Mutation)</h6>
+                </div>
+                <div class="adaptive-mutation-core mb-2">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="enableAdaptiveMutationOnPlateau">
+                        <label class="form-check-label small" for="enableAdaptiveMutationOnPlateau">Enable Adaptive Mutation</label>
+                    </div>
+                    <div class="row g-2 adaptive-mutation-grid">
+                        <div class="col-6">
+                            <label for="plateauMutationRate" class="form-label x-small">Mutation %</label>
+                            <input type="number" class="form-control form-control-sm" id="plateauMutationRate" value="15" disabled>
                         </div>
-                        <div class="card-body">
-                            <form id="configForm">
-                                <div class="config-grid mb-2">
-                                    <div class="config-field">
-                                        <label for="generations" class="form-label">Generations</label>
-                                        <input type="number" class="form-control" id="generations" value="1000" min="1" required>
-                                    </div>
-                                    <div class="config-field">
-                                        <label for="chromosomes" class="form-label">Chromosomes</label>
-                                        <input type="number" class="form-control" id="chromosomes" value="15000" min="1" required>
-                                    </div>
-                                    <div class="config-field">
-                                        <label for="selectionRate" class="form-label">Selection (%)</label>
-                                        <input type="number" class="form-control" id="selectionRate" value="50" min="0" max="100" required>
-                                    </div>
-                                    <div class="config-field">
-                                        <label for="crossoverRate" class="form-label">Crossover (%)</label>
-                                        <input type="number" class="form-control" id="crossoverRate" value="100" min="0" max="100" required>
-                                    </div>
-                                    <div class="config-field">
-                                        <label for="mutationRate" class="form-label">Mutation (%)</label>
-                                        <input type="number" class="form-control" id="mutationRate" value="10" min="0" max="100" required>
-                                    </div>
-                                    <div class="config-field">
-                                        <label for="seriesPerMutation" class="form-label">Mutation Series</label>
-                                        <input type="number" class="form-control" id="seriesPerMutation" value="12" min="1" required>
-                                    </div>
-                                    <div class="config-field config-field-full">
-                                        <label for="lifeExpectancy" class="form-label">Life Expectancy</label>
-                                        <input type="number" class="form-control" id="lifeExpectancy" value="15" min="1" required>
-                                    </div>
-                                </div>
-
-                                <div class="config-options-row life-row mb-2">
-                                    <div class="form-check mb-0 compact-check">
-                                        <input class="form-check-input" type="checkbox" id="activateLifeExpectancy">
-                                        <label class="form-check-label" for="activateLifeExpectancy">
-                                            Enable life expectancy
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <div class="config-options-row processing-row mb-3">
-                                    <h6 class="text-muted options-title">Processing</h6>
-                                    <div class="options-inline">
-                                        <div class="form-check mb-0 compact-check">
-                                            <input class="form-check-input" type="radio" name="processingOption" id="elitist" value="elitist" checked>
-                                            <label class="form-check-label" for="elitist">
-                                                Elitist
-                                            </label>
-                                        </div>
-                                        <div class="form-check mb-0 compact-check">
-                                            <input class="form-check-input" type="radio" name="processingOption" id="rotation" value="rotation" >
-                                            <label class="form-check-label" for="rotation">
-                                                Roulette
-                                            </label>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="config-options-row mb-2">
-                                    <div class="form-check mb-0 compact-check">
-                                        <input class="form-check-input" type="checkbox" id="enablePartialRestart">
-                                        <label class="form-check-label" for="enablePartialRestart">
-                                            Enable partial restart (anti-plateau)
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <div class="config-grid restart-grid mb-3">
-                                    <div class="config-field">
-                                        <label for="plateauGenerations" class="form-label">Plateau Generations</label>
-                                        <input type="number" class="form-control" id="plateauGenerations" value="20" min="1" required>
-                                    </div>
-                                    <div class="config-field">
-                                        <label for="restartEliteCount" class="form-label">Restart Elite Count</label>
-                                        <input type="number" class="form-control" id="restartEliteCount" value="2" min="1" required>
-                                    </div>
-                                    <div class="config-field">
-                                        <label for="restartPopulationRate" class="form-label">Restart Population (%)</label>
-                                        <input type="number" class="form-control" id="restartPopulationRate" value="70" min="1" max="100" required>
-                                    </div>
-                                </div>
-
-                                <div class="d-grid gap-2 action-buttons">
-                                    <button type="button" class="btn btn-success btn-lg" id="startBtn">
-                                        <i class="bi bi-play-circle"></i> Start
-                                    </button>
-                                    <button type="button" class="btn btn-warning btn-lg" id="stopBtn" disabled>
-                                        <i class="bi bi-stop-circle"></i> Stop
-                                    </button>
-                                    <button type="button" class="btn btn-danger btn-lg" id="resetBtn">
-                                        <i class="bi bi-arrow-clockwise"></i> Clear
-                                    </button>
-                                </div>
-                            </form>
+                        <div class="col-6">
+                            <label for="plateauGenerations" class="form-label x-small">Plateau Gen</label>
+                            <input type="number" class="form-control form-control-sm" id="plateauGenerations" value="20" disabled>
                         </div>
                     </div>
                 </div>
+                <div class="adaptive-restart-group">
+                    <div class="x-small text-secondary fw-bold text-uppercase mb-2">Restart Settings</div>
+                    <div class="row g-2 adaptive-mutation-grid">
+                    <div class="col-6">
+                        <label for="restartEliteCount" class="form-label x-small">Elite Count</label>
+                        <input type="number" class="form-control form-control-sm" id="restartEliteCount" value="2">
+                    </div>
+                    <div class="col-6">
+                        <label for="restartPopulationRate" class="form-label x-small">Restart Pop %</label>
+                        <input type="number" class="form-control form-control-sm" id="restartPopulationRate" value="70">
+                    </div>
+                </div>
+                </div>
+            </div>
 
-                <div class="col-lg-9 board-center-column">
-                    <div class="row g-3 board-solution-row">
-                        <div class="col-lg-8">
-                            <div class="card shadow-lg board-card board-full board-side">
-                                <div class="card-header bg-primary text-white">
-                                    <h5 class="mb-0">
-                                        <i class="bi bi-grid-3x2"></i> Knight Path
-                                    </h5>
-                                </div>
-                                <div class="card-body p-3">
-                                    <div class="board-playback-layout">
-                                        <div class="animation-toolbar">
-                                            <div class="animation-speed">
-                                                <label for="animationSpeed" class="form-label mb-0">Speed</label>
-                                                <div class="animation-speed-slider-wrap">
-                                                    <input type="range" id="animationSpeed" class="animation-speed-slider" min="0" max="3" step="1" value="2" aria-label="Animation speed">
-                                                    <div class="animation-speed-scale" aria-hidden="true">
-                                                        <span>0</span>
-                                                        <span>1</span>
-                                                        <span>2</span>
-                                                        <span>3</span>
-                                                    </div>
-                                                </div>
-                                            </div>
+            <div class="sidebar-actions pt-2">
+                <button type="button" class="btn btn-success sidebar-btn sidebar-btn-main" id="startBtn">
+                    <i class="bi bi-play-fill"></i> Start Evolution
+                </button>
+                <div class="btn-group w-100 sidebar-btn-group">
+                    <button type="button" class="btn btn-warning sidebar-btn" id="stopBtn" disabled>Stop</button>
+                    <button type="button" class="btn btn-outline-danger sidebar-btn" id="resetBtn">Clear</button>
+                </div>
+            </div>
+        </form>
+    </aside>
 
-                                            <div class="animation-actions" role="group" aria-label="Animation controls">
-                                                <button type="button" class="btn btn-outline-secondary btn-sm" id="prevStepBtn" title="Previous step">
-                                                    <i class="bi bi-skip-backward-fill"></i> Previous
-                                                </button>
-                                                <button type="button" class="btn btn-outline-secondary btn-sm" id="pauseBtn" title="Pause or resume">
-                                                    <i class="bi bi-pause-fill"></i> Pause
-                                                </button>
-                                                <button type="button" class="btn btn-outline-secondary btn-sm" id="nextStepBtn" title="Next step">
-                                                    <i class="bi bi-skip-forward-fill"></i> Next
-                                                </button>
-                                            </div>
-                                        </div>
+    <main class="main-content p-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="h4 mb-0 fw-bold dashboard-title">Genetic Algorithm Dashboard</h2>
+            <div id="results" class="status-banner status-banner-info" role="status" aria-live="polite">
+                <i class="bi bi-info-circle status-banner-icon" aria-hidden="true"></i>
+                <span class="status-banner-text">Waiting for evolution...</span>
+            </div>
+        </div>
 
-                                        <div class="board-stage">
-                                            <div class="board-frame">
-                                                <div class="board-axis-corner"></div>
-                                                <div id="boardColLabels" class="board-axis board-axis-cols"></div>
-                                                <div id="boardRowLabels" class="board-axis board-axis-rows"></div>
-                                                <div id="chessBoard" class="chess-board">
-                                                    <!-- The board is generated dynamically via JavaScript -->
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+        <div class="row g-3 mb-4">
+            <div class="col-md-3">
+                <div class="stat-card p-3 rounded shadow-sm">
+                    <span class="text-secondary small">Generation</span>
+                    <h3 id="currentGeneration" class="mb-0 text-primary">0</h3>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card p-3 rounded shadow-sm border-start border-success border-4">
+                    <span class="text-secondary small">Best Fitness</span>
+                    <h3 id="bestFitness" class="mb-0 text-success">0</h3>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card p-3 rounded shadow-sm border-start border-warning border-4">
+                    <span class="text-secondary small">Avg Fitness</span>
+                    <h3 id="avgFitness" class="mb-0 text-warning">0</h3>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card p-3 rounded shadow-sm border-start border-danger border-4">
+                    <span class="text-secondary small">Visited</span>
+                    <h3 id="visitedSquares" class="mb-0 text-danger">0/64</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex align-items-center gap-2 mb-4">
+            <div class="progress bg-secondary bg-opacity-25 flex-grow-1" style="height: 6px;">
+                <div id="progressBar" class="progress-bar bg-primary" role="progressbar" style="width: 0%"></div>
+            </div>
+            <span id="progressPercent" class="x-small fw-bold text-secondary">0%</span>
+        </div>
+
+        <div class="row g-3 align-items-stretch">
+            <div class="col-lg-4 d-flex flex-column gap-3">
+                <div class="card shadow chart-card flex-fill">
+                    <div class="card-header chart-title">
+                        <span class="fw-bold"><i class="bi bi-collection me-2"></i>Total Chromosomes</span>
+                    </div>
+                    <div class="card-body p-2">
+                        <canvas id="populationChart" height="100"></canvas>
+                    </div>
+                </div>
+                <div class="card shadow chart-card flex-fill">
+                    <div class="card-header chart-title">
+                        <span class="fw-bold"><i class="bi bi-graph-up-arrow me-2"></i>Best x Average Fitness</span>
+                    </div>
+                    <div class="card-body p-2">
+                        <canvas id="fitnessChart" height="100"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-5">
+                <div class="card bg-dark-subtle border-secondary shadow h-100">
+                    <div class="card-header bg-transparent border-secondary d-flex justify-content-between align-items-center">
+                        <span class="fw-bold"><i class="bi bi-grid-3x2 me-2"></i>Knight Path</span>
+                        <div class="d-flex align-items-center gap-2">
+                            <label class="x-small text-secondary">Speed</label>
+                            <input type="range" id="animationSpeed" class="form-range" style="width: 100px" min="0" max="3" step="1" value="2">
+                            <button id="prevStepBtn" class="btn btn-sm btn-outline-light" title="Previous" aria-label="Previous">
+                                <i class="bi bi-skip-backward-fill"></i>
+                            </button>
+                            <button id="pauseBtn" class="btn btn-sm btn-outline-light"><i class="bi bi-pause-fill"></i></button>
+                            <button id="nextStepBtn" class="btn btn-sm btn-outline-light" title="Next" aria-label="Next">
+                                <i class="bi bi-skip-forward-fill"></i>
+                            </button>
                         </div>
-
-                        <div class="col-lg-4">
-                            <div class="card shadow-lg solution-card solution-side-card">
-                                <div class="card-header bg-primary text-white">
-                                    <h5 class="mb-0">
-                                        <i class="bi bi-signpost-split"></i> Solution Path
-                                    </h5>
-                                </div>
-                                <div class="card-body">
-                                    <div id="solutionPath" class="border rounded p-3 bg-light">
-                                        <span class="text-muted">Waiting for result...</span>
-                                    </div>
-                                </div>
-                            </div>
+                    </div>
+                    <div class="card-body d-flex justify-content-center py-4 board-stage">
+                        <div class="board-frame">
+                            <div class="board-corner"></div>
+                            <div id="boardColLabels" class="board-col-labels"></div>
+                            <div id="boardRowLabels" class="board-row-labels"></div>
+                            <div id="chessBoard" class="chess-board"></div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="row g-3 mt-2 align-items-stretch footer-split-row">
-                <div class="col-12 col-lg-6">
-                    <div class="card shadow-lg stats-card stats-footer-card">
-                        <div class="card-header bg-primary text-white">
-                            <h5 class="mb-0">
-                                <i class="bi bi-bar-chart"></i> Results and Statistics
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <div id="results" class="alert alert-info">
-                                <i class="bi bi-info-circle"></i> Waiting for evolution to start...
-                            </div>
-
-                            <div class="row stats-grid mt-2 g-2">
-                                <div class="col-6 col-lg-3">
-                                    <div class="stat-box">
-                                        <h6 class="text-muted">Current Generation</h6>
-                                        <h3 id="currentGeneration" class="text-primary">0</h3>
-                                    </div>
-                                </div>
-                                <div class="col-6 col-lg-3">
-                                    <div class="stat-box">
-                                        <h6 class="text-muted">Best</h6>
-                                        <h3 id="bestFitness" class="text-success">0</h3>
-                                    </div>
-                                </div>
-                                <div class="col-6 col-lg-3">
-                                    <div class="stat-box">
-                                        <h6 class="text-muted">Average</h6>
-                                        <h3 id="avgFitness" class="text-warning">0</h3>
-                                    </div>
-                                </div>
-                                <div class="col-6 col-lg-3">
-                                    <div class="stat-box">
-                                        <h6 class="text-muted">Visited Squares</h6>
-                                        <h3 id="visitedSquares" class="text-danger">0/64</h3>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="mt-3">
-                                <small class="text-muted">Evolution Progress</small>
-                                <div class="progress mt-1" style="height: 22px;">
-                                    <div id="progressBar" class="progress-bar bg-success" role="progressbar" aria-valuenow="0"
-                                        aria-valuemin="0" aria-valuemax="100" style="width: 0%">
-                                        <span id="progressPercent">0%</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="save-score-panel mt-3">
-                                <button type="button" class="btn btn-outline-primary w-100" id="saveScoreBtn" disabled>
-                                    <i class="bi bi-save"></i> Save data
-                                </button>
-                                <div id="saveScoreStatus" class="save-score-status text-muted mt-2">
-                                    Saving will be enabled when processing finishes.
-                                </div>
-                            </div>
-                        </div>
+            <div class="col-lg-3">
+                <div class="card bg-dark-subtle border-secondary shadow solution-path-card">
+                    <div class="card-header bg-transparent border-secondary">
+                        <span class="fw-bold"><i class="bi bi-signpost-split me-2"></i>Solution Path</span>
                     </div>
-                </div>
-
-                <div class="col-12 col-lg-6">
-                    <div class="card shadow-lg population-card">
-                        <div class="card-header bg-primary text-white">
-                            <h5 class="mb-0">
-                                <i class="bi bi-graph-up"></i> Real-Time Population
-                            </h5>
+                    <div class="card-body p-2 d-flex flex-column" style="flex: 1; min-height: 0; overflow: hidden;">
+                        <div id="solutionPathContainer" class="solution-path-container" style="flex: 1; min-height: 0;">
+                            <table id="solutionPath" class="table table-sm mb-0">
+                                <thead class="table-success sticky-top">
+                                    <tr>
+                                        <th class="text-center solution-path-cell">Step</th>
+                                        <th class="text-center solution-path-cell">X</th>
+                                        <th class="text-center solution-path-cell">Y</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="text-center solution-path-cell">1</td>
+                                        <td class="text-center solution-path-cell">--</td>
+                                        <td class="text-center solution-path-cell">--</td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
-                        <div class="card-body">
-                            <div class="population-chart-stack">
-                                <div class="population-chart-panel">
-                                    <p class="population-chart-caption text-muted mb-2">
-                                        Evolution of total chromosomes per generation.
-                                    </p>
-                                    <div class="population-chart-wrap">
-                                        <canvas id="populationChart" class="population-chart-canvas" aria-label="Real-time population chart" role="img"></canvas>
-                                    </div>
-                                </div>
-
-                                <div class="population-chart-panel population-chart-panel-compact">
-                                    <p class="population-chart-caption text-muted mb-2">
-                                        Best and average fitness across generations.
-                                    </p>
-                                    <div class="population-chart-wrap population-chart-wrap-compact">
-                                        <canvas id="fitnessChart" class="population-chart-canvas" aria-label="Best and average fitness chart" role="img"></canvas>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row g-3 mt-2">
-                <div class="col-12">
-                    <div class="card shadow-lg history-card">
-                        <div class="card-header bg-primary text-white">
-                            <h5 class="mb-0">
-                                <i class="bi bi-table"></i> Score History
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <p id="scoresTableStatus" class="scores-table-status text-muted mb-2">
-                                Loading history...
-                            </p>
-                            <div class="table-responsive scores-table-wrap">
-                                <table class="table table-sm table-striped table-hover align-middle mb-0" id="scoresTable">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th scope="col">Created At</th>
-                                            <th scope="col">Fitness</th>
-                                            <th scope="col">Average Fitness</th>
-                                            <th scope="col">Generations</th>
-                                            <th scope="col">Chromosomes</th>
-                                            <th scope="col">Selection Rate</th>
-                                            <th scope="col">Crossover Rate</th>
-                                            <th scope="col">Mutation Rate</th>
-                                            <th scope="col">Series Per Mutation</th>
-                                            <th scope="col">Life Expectancy</th>
-                                            <th scope="col">Enable Life Expectancy</th>
-                                            <th scope="col">Processing Option</th>
-                                            <th scope="col">Partial Restart</th>
-                                            <th scope="col">Plateau Gen</th>
-                                            <th scope="col">Elite Count</th>
-                                            <th scope="col">Restart Rate (%)</th>
-                                            <th scope="col">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="scoresTableBody">
-                                        <tr>
-                                            <td colspan="17" class="text-center text-muted py-3">No data to display.</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
+                        <button type="button" class="btn btn-outline-primary w-100 mt-2" id="saveScoreBtn" disabled>
+                            <i class="bi bi-save me-2"></i>Save Final Result
+                        </button>
+                        <div id="saveScoreStatus" class="x-small text-muted mt-2 text-center">
+                            Save enabled when finished.
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <div id="deleteScoreModal" class="score-modal" aria-hidden="true">
-        <div class="score-modal-backdrop" data-modal-close></div>
-        <div class="score-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="deleteScoreModalTitle">
-            <div class="score-modal-header">
-                <h5 id="deleteScoreModalTitle" class="mb-0">
-                    <i class="bi bi-exclamation-triangle"></i> Remove score
-                </h5>
-                <button type="button" class="btn-close" data-modal-close aria-label="Close"></button>
+        <div class="card bg-dark-subtle border-secondary mt-4 shadow">
+            <div class="card-header bg-transparent border-secondary">
+                <span class="fw-bold"><i class="bi bi-clock-history me-2"></i>History Log</span>
             </div>
-            <div class="score-modal-body">
-                <p id="deleteScoreModalMessage" class="mb-0">
-                    Are you sure you want to remove this score from history?
-                </p>
-            </div>
-            <div class="score-modal-footer">
-                <button type="button" class="btn btn-outline-secondary" id="deleteScoreCancelBtn" data-modal-close>
-                    Cancel
-                </button>
-                <button type="button" class="btn btn-danger" id="deleteScoreConfirmBtn">
-                    <i class="bi bi-trash"></i> Remove
-                </button>
+            <div class="table-responsive">
+                <table class="table table-dark table-sm mb-0 history-table" id="scoresTable">
+                    <thead>
+                        <tr class="text-secondary small">
+                            <th>Created At</th><th>Fitness</th><th>Avg Fit</th><th>Generations</th><th>Chrom</th><th>Sel. Rate</th><th>Cross. Rate</th><th>Mut. Rate</th><th>Series/Mut</th><th>Life Exp.</th><th>ALE</th><th>Processing</th><th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scoresTableBody"></tbody>
+                </table>
             </div>
         </div>
-    </div>
+
+        <!-- Delete Score Confirmation Modal -->
+        <div class="modal" id="deleteScoreModal" aria-labelledby="deleteScoreModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-sm">
+                <div class="modal-content delete-score-modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="deleteScoreModalLabel">Remove Score</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p id="deleteScoreModalMessage">Are you sure you want to remove this score from history?</p>
+                        <p class="text-muted small">This action cannot be undone.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-danger" id="deleteScoreConfirmBtn">
+                            <i class="bi bi-trash me-1"></i>Remove
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
 
     <script type="module" src="../src/client/main.js"></script>
 </body>
-
 </html>
