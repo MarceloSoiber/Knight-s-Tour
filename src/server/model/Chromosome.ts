@@ -2,11 +2,13 @@ class Chromosome {
     private solution: number[];
     private score: number;
     private age: number;
+    private fitness: number;
 
     constructor(age: number = -2) {
         this.solution = [];
         this.score = 0;
         this.age = age;
+        this.fitness = 0;
     }
 
     getSolution(): number[] {
@@ -49,25 +51,39 @@ class Chromosome {
         this.age++;
     }
 
+    getFitness(): number {
+        return this.fitness;
+    }
+
+    setFitness(fitness: number): void {
+        if (typeof fitness === 'number') {
+            this.fitness = fitness;
+        } else {
+            throw new Error('Fitness must be a number');
+        }
+    }
+
     clone(): Chromosome {
         const clone = new Chromosome(this.age);
         clone.setSolution([...this.solution]);
         clone.setScore(this.score);
+        clone.setFitness(this.fitness);
         return clone;
     }
 
     compareTo(other: Chromosome): number {
-        return other.getScore() - this.getScore();
+        return other.getFitness() - this.getFitness();
     }
 
     toString(): string {
-        return `Chromosome {solution: [${this.solution.join(', ')}], score: ${this.score}, age: ${this.age}}`;
+        return `Chromosome {solution: [${this.solution.join(', ')}], score: ${this.score}, fitness: ${this.fitness}, age: ${this.age}}`;
     }
 
-    toJSON(): { solution: number[]; score: number; age: number } {
+    toJSON(): { solution: number[]; score: number; fitness: number; age: number } {
         return {
             solution: this.solution,
             score: this.score,
+            fitness: this.fitness,
             age: this.age
         };
     }
