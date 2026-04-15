@@ -7,6 +7,7 @@ class PlaybackControlsView {
         this.prevStepBtn = document.getElementById('prevStepBtn');
         this.nextStepBtn = document.getElementById('nextStepBtn');
         this.speedSlider = document.getElementById('animationSpeed');
+        this.speedValueEl = document.getElementById('animationSpeedValue');
     }
 
     bind({ onStart, onStop, onReset, onPause, onPrev, onNext, onSpeedInput }) {
@@ -22,6 +23,11 @@ class PlaybackControlsView {
     getSpeedIndex() {
         if (!this.speedSlider) return 0;
         return Number(this.speedSlider.value) || 0;
+    }
+
+    setSpeedValueLabel(label) {
+        if (!this.speedValueEl) return;
+        this.speedValueEl.textContent = label;
     }
 
     setStartRunning(isRunning) {

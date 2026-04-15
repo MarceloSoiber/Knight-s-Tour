@@ -27,6 +27,10 @@ type GenerationProgress = {
   generation: number;
   bestFitness: number;
   avgFitness: number;
+  modelBestFitness?: number;
+  modelAvgFitness?: number;
+  top10AvgScore?: number;
+  medianScore?: number;
   chromosomeTotal: number;
   totalGenerations: number;
 };
@@ -226,6 +230,87 @@ function readJsonBody(req: IncomingMessage): Promise<unknown> {
   });
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function validateGenerationConfigInput(input: unknown): { ok: true; data: Partial<GenerationConfig> } | { ok: false; error: string } {
+  if (!isRecord(input)) {
+    return { ok: false, error: 'Generation config must be a JSON object.' };
+  }
+
+  const allowedKeys = new Set([
+    'generations',
+    'chromosomes',
+    'selectionRate',
+    'crossoverRate',
+    'mutationRate',
+    'enableAdaptiveMutationOnPlateau',
+    'plateauMutationRate',
+    'seriesPerMutation',
+    'lifeExpectancy',
+    'activateLifeExpectancy',
+    'processingOption',
+    'enablePartialRestart',
+    'plateauGenerations',
+    'restartEliteCount',
+    'restartPopulationRate',
+  ]);
+
+  for (const key of Object.keys(input)) {
+    if (!allowedKeys.has(key)) {
+      return { ok: false, error: `Unknown config field: ${key}.` };
+    }
+  }
+
+  const numberFields: Array<keyof GenerationConfig> = [
+    'generations',
+    'chromosomes',
+    'selectionRate',
+    'crossoverRate',
+    'mutationRate',
+    'plateauMutationRate',
+    'seriesPerMutation',
+    'lifeExpectancy',
+    'plateauGenerations',
+    'restartEliteCount',
+    'restartPopulationRate',
+  ];
+
+  for (const field of numberFields) {
+    const value = input[field];
+    if (value === undefined) continue;
+    if (typeof value !== 'number' || !Number.isFinite(value)) {
+      return { ok: false, error: `Field ${field} must be a finite number.` };
+    }
+  }
+
+  const booleanFields: Array<keyof GenerationConfig> = [
+    'enableAdaptiveMutationOnPlateau',
+    'activateLifeExpectancy',
+    'enablePartialRestart',
+  ];
+
+  for (const field of booleanFields) {
+    const value = input[field];
+    if (value === undefined) continue;
+    if (typeof value !== 'boolean') {
+      return { ok: false, error: `Field ${field} must be boolean.` };
+    }
+  }
+
+  const processingOption = input.processingOption;
+  if (
+    processingOption !== undefined
+    && processingOption !== 'elitist'
+    && processingOption !== 'rotation'
+  ) {
+    return { ok: false, error: 'Field processingOption must be "elitist" or "rotation".' };
+  }
+
+  return { ok: true, data: input as Partial<GenerationConfig> };
+}
+
 const server = createServer(async (req, res) => {
   const method = req.method || 'GET';
   const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
@@ -257,8 +342,15 @@ const server = createServer(async (req, res) => {
     }
 
     if (method === 'POST' && url.pathname === '/api/generate/jobs') {
-      const body = (await readJsonBody(req)) as Partial<GenerationConfig>;
-      const job = createGenerationJob(body);
+      const body = await readJsonBody(req);
+      const validated = validateGenerationConfigInput(body);
+
+      if (!validated.ok) {
+        writeJson(res, 400, { ok: false, error: validated.error });
+        return;
+      }
+
+      const job = createGenerationJob(validated.data);
       writeJson(res, 202, { ok: true, data: toJobPayload(job) });
       return;
     }

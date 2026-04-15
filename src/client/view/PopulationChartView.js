@@ -1,13 +1,17 @@
 class PopulationChartView {
     constructor() {
         this.canvas = document.getElementById('populationChart');
+        this.fitnessCanvas = document.getElementById('fitnessChart');
         this.context = this.canvas ? this.canvas.getContext('2d') : null;
+        this.fitnessContext = this.fitnessCanvas ? this.fitnessCanvas.getContext('2d') : null;
         this.history = [];
         this.maxPoints = 90;
         this.lineColor = '#1976D2';
+        this.bestLineColor = '#2E7D32';
+        this.avgLineColor = '#FB8C00';
         this.handleResize = this.handleResize.bind(this);
 
-        if (this.canvas) {
+        if (this.canvas || this.fitnessCanvas) {
             window.addEventListener('resize', this.handleResize);
             this.render();
         }
@@ -22,12 +26,14 @@ class PopulationChartView {
         this.render();
     }
 
-    update(generation, chromosomeTotal) {
+    update(generation, chromosomeTotal, bestFitness = 0, avgFitness = 0) {
         if (typeof generation !== 'number') return;
 
         this.history.push({
             generation,
-            chromosomeTotal: Math.max(0, Number(chromosomeTotal) || 0)
+            chromosomeTotal: Math.max(0, Number(chromosomeTotal) || 0),
+            bestFitness: Math.max(0, Number(bestFitness) || 0),
+            avgFitness: Math.max(0, Number(avgFitness) || 0)
         });
 
         if (this.history.length > this.maxPoints) {
@@ -38,6 +44,11 @@ class PopulationChartView {
     }
 
     render() {
+        this.renderPopulationChart();
+        this.renderFitnessChart();
+    }
+
+    renderPopulationChart() {
         if (!this.canvas || !this.context) return;
 
         const width = this.canvas.clientWidth || this.canvas.parentElement?.clientWidth || 0;
@@ -79,7 +90,54 @@ class PopulationChartView {
         this.drawGrid(context, padding, chartWidth, chartHeight);
         this.drawAxes(context, padding, chartWidth, chartHeight, yMax, minGeneration, maxGeneration);
         this.drawChromosomeSeries(context, padding, chartWidth, chartHeight, yMax, minGeneration, maxGeneration);
-        this.drawLegend(context, width, padding.top);
+        this.drawPopulationLegend(context, width, padding.top);
+
+        context.restore();
+    }
+
+    renderFitnessChart() {
+        if (!this.fitnessCanvas || !this.fitnessContext) return;
+
+        const width = this.fitnessCanvas.clientWidth || this.fitnessCanvas.parentElement?.clientWidth || 0;
+        const height = this.fitnessCanvas.clientHeight || this.fitnessCanvas.parentElement?.clientHeight || 0;
+
+        if (!width || !height) return;
+
+        const pixelRatio = window.devicePixelRatio || 1;
+        const targetWidth = Math.floor(width * pixelRatio);
+        const targetHeight = Math.floor(height * pixelRatio);
+
+        if (this.fitnessCanvas.width !== targetWidth || this.fitnessCanvas.height !== targetHeight) {
+            this.fitnessCanvas.width = targetWidth;
+            this.fitnessCanvas.height = targetHeight;
+        }
+
+        const context = this.fitnessContext;
+        context.save();
+        context.scale(pixelRatio, pixelRatio);
+        context.clearRect(0, 0, width, height);
+
+        this.drawBackground(context, width, height);
+
+        if (this.history.length === 0) {
+            this.drawEmptyState(context, width, height);
+            context.restore();
+            return;
+        }
+
+        const padding = { top: 18, right: 14, bottom: 24, left: 32 };
+        const chartWidth = Math.max(1, width - padding.left - padding.right);
+        const chartHeight = Math.max(1, height - padding.top - padding.bottom);
+        const minGeneration = Math.max(1, this.history[0]?.generation || 1);
+        const maxGeneration = Math.max(minGeneration, this.history[this.history.length - 1]?.generation || minGeneration);
+        const maxFitnessRaw = Math.max(1, ...this.history.flatMap((entry) => [entry.bestFitness, entry.avgFitness]));
+        const yHeadroom = Math.max(1, Math.ceil(maxFitnessRaw * 0.08));
+        const yMax = maxFitnessRaw + yHeadroom;
+
+        this.drawGrid(context, padding, chartWidth, chartHeight);
+        this.drawAxes(context, padding, chartWidth, chartHeight, yMax, minGeneration, maxGeneration, 'Fitness');
+        this.drawDualSeries(context, padding, chartWidth, chartHeight, yMax, minGeneration, maxGeneration);
+        this.drawFitnessLegend(context, width, padding.top);
 
         context.restore();
     }
@@ -123,7 +181,7 @@ class PopulationChartView {
         }
     }
 
-    drawAxes(context, padding, chartWidth, chartHeight, yMax, minGeneration, maxGeneration) {
+    drawAxes(context, padding, chartWidth, chartHeight, yMax, minGeneration, maxGeneration, yLabel = 'Value') {
         context.fillStyle = '#455a64';
         context.font = '600 10px Segoe UI, Tahoma, Geneva, Verdana, sans-serif';
         context.textAlign = 'right';
@@ -140,6 +198,14 @@ class PopulationChartView {
         context.fillText(String(minGeneration), padding.left, padding.top + chartHeight + 6);
         context.fillText(String(maxGeneration), padding.left + chartWidth, padding.top + chartHeight + 6);
         context.fillText('Generation', padding.left + chartWidth / 2, padding.top + chartHeight + 16);
+
+        context.save();
+        context.translate(10, padding.top + chartHeight / 2);
+        context.rotate(-Math.PI / 2);
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+        context.fillText(yLabel, 0, 0);
+        context.restore();
     }
 
     drawChromosomeSeries(context, padding, chartWidth, chartHeight, yMax, minGeneration, maxGeneration) {
@@ -172,7 +238,49 @@ class PopulationChartView {
         });
     }
 
-    drawLegend(context, width, topOffset) {
+    drawDualSeries(context, padding, chartWidth, chartHeight, yMax, minGeneration, maxGeneration) {
+        const range = Math.max(1, maxGeneration - minGeneration);
+
+        const bestPoints = this.history.map((entry) => {
+            const x = padding.left + (chartWidth * (entry.generation - minGeneration)) / range;
+            const y = padding.top + chartHeight - (chartHeight * entry.bestFitness) / yMax;
+            return { x, y };
+        });
+
+        const avgPoints = this.history.map((entry) => {
+            const x = padding.left + (chartWidth * (entry.generation - minGeneration)) / range;
+            const y = padding.top + chartHeight - (chartHeight * entry.avgFitness) / yMax;
+            return { x, y };
+        });
+
+        this.drawSeriesLine(context, bestPoints, this.bestLineColor, 2.2, 2.2);
+        this.drawSeriesLine(context, avgPoints, this.avgLineColor, 2.0, 2.0);
+    }
+
+    drawSeriesLine(context, points, color, lineWidth, radius) {
+        if (!points.length) return;
+
+        context.lineWidth = lineWidth;
+        context.strokeStyle = color;
+        context.fillStyle = color;
+        context.beginPath();
+        points.forEach((point, index) => {
+            if (index === 0) {
+                context.moveTo(point.x, point.y);
+            } else {
+                context.lineTo(point.x, point.y);
+            }
+        });
+        context.stroke();
+
+        points.forEach((point) => {
+            context.beginPath();
+            context.arc(point.x, point.y, radius, 0, Math.PI * 2);
+            context.fill();
+        });
+    }
+
+    drawPopulationLegend(context, width, topOffset) {
         const legendX = width - 160;
         const legendY = topOffset - 4;
 
@@ -184,6 +292,25 @@ class PopulationChartView {
         context.fillRect(legendX, legendY, 10, 10);
         context.fillStyle = '#37474f';
         context.fillText('Total Chromosomes', legendX + 16, legendY + 5);
+    }
+
+    drawFitnessLegend(context, width, topOffset) {
+        const legendX = width - 160;
+        const legendY = topOffset - 4;
+
+        context.font = '600 10px Segoe UI, Tahoma, Geneva, Verdana, sans-serif';
+        context.textAlign = 'left';
+        context.textBaseline = 'middle';
+
+        context.fillStyle = this.bestLineColor;
+        context.fillRect(legendX, legendY, 10, 10);
+        context.fillStyle = '#37474f';
+        context.fillText('Best', legendX + 16, legendY + 5);
+
+        context.fillStyle = this.avgLineColor;
+        context.fillRect(legendX + 58, legendY, 10, 10);
+        context.fillStyle = '#37474f';
+        context.fillText('Average', legendX + 74, legendY + 5);
     }
 }
 

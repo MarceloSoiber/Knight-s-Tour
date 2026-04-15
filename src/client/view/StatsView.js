@@ -3,6 +3,10 @@ class StatsView {
         this.currentGenerationEl = document.getElementById('currentGeneration');
         this.bestFitnessEl = document.getElementById('bestFitness');
         this.avgFitnessEl = document.getElementById('avgFitness');
+        this.bestModelFitnessEl = document.getElementById('bestModelFitness');
+        this.avgModelFitnessEl = document.getElementById('avgModelFitness');
+        this.top10AvgScoreEl = document.getElementById('top10AvgScore');
+        this.medianScoreEl = document.getElementById('medianScore');
         this.visitedSquaresEl = document.getElementById('visitedSquares');
         this.progressBarEl = document.getElementById('progressBar');
         this.progressPercentEl = document.getElementById('progressPercent');
@@ -131,10 +135,25 @@ class StatsView {
         this.saveScoreBtn.innerHTML = '<i class="bi bi-save"></i> Save data';
     }
 
-    setGenerationStats(currentGeneration, bestFitness, avgFitness) {
+    setGenerationStats(currentGeneration, bestFitness, avgFitness, metrics = {}) {
+        const bestModelFitness = Number(metrics.modelBestFitness) || bestFitness;
+        const avgModelFitness = Number(metrics.modelAvgFitness) || avgFitness;
+        const top10AvgScore = Number(metrics.top10AvgScore) || avgFitness;
+        const medianScore = Number(metrics.medianScore) || avgFitness;
+
         if (this.currentGenerationEl) this.currentGenerationEl.textContent = String(currentGeneration);
+
         if (this.bestFitnessEl) this.bestFitnessEl.textContent = String(Math.floor(bestFitness));
         if (this.avgFitnessEl) this.avgFitnessEl.textContent = String(Math.floor(avgFitness));
+        if (this.bestModelFitnessEl) this.bestModelFitnessEl.textContent = String(Math.floor(bestModelFitness));
+        if (this.avgModelFitnessEl) this.avgModelFitnessEl.textContent = String(Math.floor(avgModelFitness));
+
+        if (this.avgFitnessEl) {
+            this.avgFitnessEl.title = `Avg Score: ${Math.floor(avgFitness)} | Top10 Avg Score: ${Math.floor(top10AvgScore)} | Median Score: ${Math.floor(medianScore)}`;
+        }
+
+        if (this.top10AvgScoreEl) this.top10AvgScoreEl.textContent = String(Math.floor(top10AvgScore));
+        if (this.medianScoreEl) this.medianScoreEl.textContent = String(Math.floor(medianScore));
     }
 
     setProgress(currentGeneration, totalGenerations) {
@@ -152,25 +171,35 @@ class StatsView {
         if (this.visitedSquaresEl) this.visitedSquaresEl.textContent = `${visited}/${total}`;
     }
 
-    showRunning() {
+    setResultStatus(message, variant = 'info', icon = 'info-circle') {
         if (!this.resultsEl) return;
 
-        this.resultsEl.innerHTML = `
-            <div class="alert alert-warning">
-                <i class="bi bi-hourglass-split"></i> Running genetic evolution...
-            </div>
-        `;
+        this.resultsEl.className = `status-banner status-banner-${variant}`;
+        this.resultsEl.innerHTML = '';
+
+        const iconEl = document.createElement('i');
+        iconEl.className = `bi bi-${icon} status-banner-icon`;
+        iconEl.setAttribute('aria-hidden', 'true');
+
+        const textEl = document.createElement('span');
+        textEl.className = 'status-banner-text';
+        textEl.textContent = message;
+        textEl.title = message;
+
+        this.resultsEl.appendChild(iconEl);
+        this.resultsEl.appendChild(textEl);
+    }
+
+    showRunning() {
+        this.setResultStatus('Running genetic evolution...', 'warning', 'hourglass-split');
     }
 
     showEvolutionCompleted(generationsExecuted, bestFitness) {
-        if (!this.resultsEl) return;
-
-        this.resultsEl.innerHTML = `
-            <div class="alert alert-info">
-                <i class="bi bi-cpu"></i>
-                Evolution completed in ${generationsExecuted} generations. Best fitness: ${bestFitness}/64
-            </div>
-        `;
+        this.setResultStatus(
+            `Evolution completed in ${generationsExecuted} generations. Best score: ${Math.floor(bestFitness)}/64`,
+            'info',
+            'cpu'
+        );
     }
 
     setSaveEnabled(enabled) {
@@ -211,70 +240,58 @@ class StatsView {
     }
 
     showAnimating(solutionLength) {
-        if (!this.resultsEl) return;
-
-        this.resultsEl.innerHTML = `
-            <div class="alert alert-info mt-3">
-                <i class="bi bi-play-circle"></i> Animating path: ${solutionLength}/64 visited squares
-            </div>
-        `;
+        this.setResultStatus(`Animating path: ${solutionLength}/64 visited squares`, 'info', 'play-circle');
     }
 
     showNoValidPath() {
-        if (!this.resultsEl) return;
-
-        this.resultsEl.innerHTML = `
-            <div class="alert alert-warning">
-                <i class="bi bi-exclamation-triangle"></i> No valid path found.
-            </div>
-        `;
+        this.setResultStatus('No valid path found.', 'warning', 'exclamation-triangle');
     }
 
     showFinalResult(solutionLength) {
-        if (!this.resultsEl) return;
-
         if (solutionLength === 64) {
-            this.resultsEl.innerHTML = `
-                <div class="alert alert-success">
-                    <i class="bi bi-trophy"></i> <strong>Solution found!</strong><br>
-                    Visited squares: <strong>${solutionLength}/64</strong>
-                </div>
-            `;
+            this.setResultStatus(`Solution found. Visited squares: ${solutionLength}/64`, 'success', 'trophy');
             return;
         }
 
-        this.resultsEl.innerHTML = `
-            <div class="alert alert-warning">
-                <i class="bi bi-emoji-frown"></i> <strong>Solution not found.</strong><br>
-                Visited squares: <strong>${solutionLength}/64</strong>
-            </div>
-        `;
+        this.setResultStatus(`Solution not found. Visited squares: ${solutionLength}/64`, 'warning', 'emoji-frown');
     }
 
     clearSolutionPath() {
         if (this.solutionPathEl) {
-            this.solutionPathEl.innerHTML = '';
+            const tbody = this.solutionPathEl.querySelector('tbody');
+            if (tbody) {
+                tbody.innerHTML = '';
+            }
         }
     }
 
     setSolutionPath(solution) {
         if (!this.solutionPathEl) return;
 
-        this.solutionPathEl.innerHTML = '';
-        solution.forEach((position) => {
-            const pathSpan = document.createElement('span');
-            pathSpan.className = 'path-step';
-            pathSpan.textContent = `(${position.row},${position.col})`;
-            this.solutionPathEl.appendChild(pathSpan);
+        // Get the tbody element of the table
+        const tbody = this.solutionPathEl.querySelector('tbody');
+        if (!tbody) return;
+        
+        tbody.innerHTML = '';
+        
+        solution.forEach((position, index) => {
+            const row = document.createElement('tr');
+            row.className = 'path-step';
+            row.innerHTML = `
+                <td class="text-center solution-path-cell">${index + 1}</td>
+                <td class="text-center solution-path-cell">${position.col}</td>
+                <td class="text-center solution-path-cell">${position.row}</td>
+            `;
+            tbody.appendChild(row);
         });
     }
 
     setActivePathStep(step) {
         if (!this.solutionPathEl) return;
 
-        const pathNodes = this.solutionPathEl.querySelectorAll('.path-step');
-        pathNodes.forEach((node, index) => {
-            node.classList.toggle('path-step-active', index === step);
+        const pathRows = this.solutionPathEl.querySelectorAll('tbody tr.path-step');
+        pathRows.forEach((row, index) => {
+            row.classList.toggle('table-active', index === step);
         });
     }
 
@@ -285,12 +302,13 @@ class StatsView {
         this.setSaveStatus('Saving will be enabled when processing finishes.');
 
         if (this.solutionPathEl) {
-            this.solutionPathEl.innerHTML = '<span class="text-muted">Waiting for result...</span>';
+            const tbody = this.solutionPathEl.querySelector('tbody');
+            if (tbody) {
+                tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted small">Waiting for result...</td></tr>';
+            }
         }
 
-        if (this.resultsEl) {
-            this.resultsEl.innerHTML = '<i class="bi bi-info-circle"></i> Waiting for evolution to start...';
-        }
+        this.setResultStatus('Waiting for evolution to start...', 'info', 'info-circle');
     }
 }
 

@@ -21,9 +21,17 @@ class KnightsTour {
         this.animationSpeedMs = 300;
         this.animationResolver = null;
         this.stopRequested = false;
+        this.pendingStopRequest = false;
         this.currentGeneration = 0;
+        this.bestScore = 0;
+        this.avgScore = 0;
         this.bestFitness = 0;
         this.avgFitness = 0;
+        this.modelBestFitness = 0;
+        this.modelAvgFitness = 0;
+        this.top10AvgScore = 0;
+        this.medianScore = 0;
+        this.currentChromosomeTotal = 0;
         this.totalGenerations = 0;
         this.solution = [];
         this.currentConfig = null;
@@ -34,6 +42,7 @@ class KnightsTour {
         this.currentJobId = null;
         this.eventSource = null;
         this.animationSpeedPresets = [700, 450, 300, 150];
+        this.animationSpeedLabels = ['Slow', 'Medium', 'Normal', 'Fast'];
         this.boardView = new BoardView(this.boardSize);
         this.statsView = new StatsView();
         this.populationChartView = new PopulationChartView();
@@ -41,7 +50,6 @@ class KnightsTour {
 
         this.deleteScoreModalEl = document.getElementById('deleteScoreModal');
         this.deleteScoreModalMessageEl = document.getElementById('deleteScoreModalMessage');
-        this.deleteScoreCancelBtn = document.getElementById('deleteScoreCancelBtn');
         this.deleteScoreConfirmBtn = document.getElementById('deleteScoreConfirmBtn');
 
         this.boardView.initializeBoard();
@@ -53,7 +61,7 @@ class KnightsTour {
         this.controlsView.bind({
             onStart: () => this.startEvolution(),
             onStop: () => this.requestStop(),
-            onReset: () => this.reset(),
+            onReset: () => this.reset({ resetForm: true }),
             onPause: () => this.togglePause(),
             onPrev: () => this.stepBackward(),
             onNext: () => this.stepForward(),
@@ -91,28 +99,63 @@ class KnightsTour {
             });
         }
 
-        if (this.deleteScoreCancelBtn) {
-            this.deleteScoreCancelBtn.addEventListener('click', () => this.closeDeleteScoreModal());
-        }
+        const deleteScoreDismissButtons = document.querySelectorAll('#deleteScoreModal [data-bs-dismiss="modal"]');
+        deleteScoreDismissButtons.forEach((button) => {
+            button.addEventListener('click', () => this.closeDeleteScoreModal());
+        });
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.deleteScoreModalEl?.classList.contains('is-visible')) {
+                this.closeDeleteScoreModal();
+            }
+        });
 
         if (this.deleteScoreModalEl) {
             this.deleteScoreModalEl.addEventListener('click', (event) => {
-                if (event.target?.dataset?.modalClose !== undefined) {
+                if (event.target === this.deleteScoreModalEl) {
                     this.closeDeleteScoreModal();
                 }
             });
         }
 
-        document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape' && this.deleteScoreModalEl?.classList.contains('is-visible')) {
-                this.closeDeleteScoreModal();
-            }
-        });
-
         this.syncAnimationSpeedFromSlider();
+        this.bindAdaptiveMutationControls();
+        this.bindPartialRestartControls();
         this.controlsView.setControlsEnabled(false);
         this.controlsView.setPauseButton(this.isAnimationPaused);
         this.controlsView.setStopEnabled(false);
+    }
+
+    bindAdaptiveMutationControls() {
+        const toggle = document.getElementById('enableAdaptiveMutationOnPlateau');
+        const mutationInput = document.getElementById('plateauMutationRate');
+        if (!toggle || !mutationInput) return;
+
+        const syncFieldState = () => {
+            mutationInput.disabled = !toggle.checked;
+        };
+
+        toggle.addEventListener('change', syncFieldState);
+        syncFieldState();
+    }
+
+    bindPartialRestartControls() {
+        const toggle = document.getElementById('enablePartialRestart');
+        const plateauInput = document.getElementById('plateauGenerations');
+        const eliteInput = document.getElementById('restartEliteCount');
+        const populationRateInput = document.getElementById('restartPopulationRate');
+        if (!toggle || !plateauInput || !eliteInput || !populationRateInput) return;
+
+        const syncFieldState = () => {
+            const enabled = toggle.checked;
+            plateauInput.disabled = !enabled;
+            eliteInput.disabled = !enabled;
+            populationRateInput.disabled = !enabled;
+        };
+
+        toggle.addEventListener('change', syncFieldState);
+        syncFieldState();
     }
 
     async requestStop() {
@@ -128,17 +171,37 @@ class KnightsTour {
         this.stopRequested = true;
         this.controlsView.setStopEnabled(false);
 
-        if (!this.currentJobId) return;
+        if (!this.currentJobId) {
+            const accepted = await this.sendStopRequest();
+            if (!accepted && this.isRunning) {
+                this.stopRequested = false;
+                this.controlsView.setStopEnabled(true);
+            }
+            return;
+        }
+
+        const accepted = await this.sendStopRequest(this.currentJobId);
+        if (!accepted && this.isRunning) {
+            this.stopRequested = false;
+            this.controlsView.setStopEnabled(true);
+        }
+    }
+
+    async sendStopRequest(jobId) {
+        if (!jobId) {
+            this.pendingStopRequest = true;
+            return true;
+        }
 
         try {
-            const response = await fetch(`${GENERATION_JOBS_API_URL}/${this.currentJobId}`, {
+            const response = await fetch(`${GENERATION_JOBS_API_URL}/${jobId}`, {
                 method: 'DELETE'
             });
             const payload = await response.json();
 
             if (response.status === 409) {
                 this.statsView.setSaveStatus('Processing has already finished. There is no active execution to stop.', 'info');
-                return;
+                return true;
             }
 
             if (!response.ok || !payload.ok) {
@@ -146,14 +209,18 @@ class KnightsTour {
             }
 
             this.statsView.setSaveStatus('Stop request sent. Waiting for server confirmation...', 'warning');
+            return true;
         } catch (error) {
             this.statsView.setSaveStatus(error instanceof Error ? error.message : 'Error while requesting stop.', 'danger');
+            return false;
         }
     }
 
     syncAnimationSpeedFromSlider() {
         const index = Math.max(0, Math.min(this.animationSpeedPresets.length - 1, this.controlsView.getSpeedIndex()));
         this.animationSpeedMs = this.animationSpeedPresets[index];
+        const label = this.animationSpeedLabels[index] || 'Normal';
+        this.controlsView.setSpeedValueLabel(`${label} (${this.animationSpeedMs}ms)`);
     }
 
     getFormValues() {
@@ -166,7 +233,13 @@ class KnightsTour {
             seriesPerMutation: parseInt(document.getElementById('seriesPerMutation').value),
             lifeExpectancy: parseInt(document.getElementById('lifeExpectancy').value),
             activateLifeExpectancy: document.getElementById('activateLifeExpectancy').checked,
-            processingOption: document.querySelector('input[name="processingOption"]:checked').value
+            processingOption: document.querySelector('input[name="processingOption"]:checked').value,
+            enablePartialRestart: document.getElementById('enablePartialRestart').checked,
+            enableAdaptiveMutationOnPlateau: document.getElementById('enableAdaptiveMutationOnPlateau').checked,
+            plateauGenerations: parseInt(document.getElementById('plateauGenerations').value),
+            plateauMutationRate: parseInt(document.getElementById('plateauMutationRate').value),
+            restartEliteCount: parseInt(document.getElementById('restartEliteCount').value),
+            restartPopulationRate: parseInt(document.getElementById('restartPopulationRate').value)
         };
     }
 
@@ -174,7 +247,7 @@ class KnightsTour {
         
         if (this.isRunning) return;
 
-        this.reset();
+        this.reset({ resetForm: false });
         
         this.isRunning = true;
         this.stopRequested = false;
@@ -196,6 +269,11 @@ class KnightsTour {
             const job = await this.createGenerationJob(config);
             this.currentJobId = job.id;
 
+            if (this.pendingStopRequest) {
+                this.pendingStopRequest = false;
+                await this.sendStopRequest(job.id);
+            }
+
             const finalJob = await this.waitForGenerationJobCompletion(job.id);
 
             if (!finalJob.result) {
@@ -204,8 +282,8 @@ class KnightsTour {
 
             const evolutionResult = finalJob.result;
             this.applyEvolutionResultStats(evolutionResult);
-            this.solution = evolutionResult.solution;
-            this.statsView.showEvolutionCompleted(evolutionResult.generationsExecuted, evolutionResult.bestFitness);
+            this.solution = this.normalizeEvolutionSolution(evolutionResult);
+            this.statsView.showEvolutionCompleted(evolutionResult.generationsExecuted, this.bestFitness);
             this.preparePendingScore(config, evolutionResult);
 
             if (!evolutionResult.stopped) {
@@ -295,22 +373,28 @@ class KnightsTour {
             const applySnapshot = (job) => {
                 if (!job) return;
 
-                if (job.progress) {
+                if (job.result) {
+                    this.applyEvolutionResultStats(job.result);
+                } else if (job.progress) {
                     this.currentGeneration = Number(job.progress.generation) || 0;
-                    this.bestFitness = Number(job.progress.bestFitness) || 0;
-                    this.avgFitness = Number(job.progress.avgFitness) || 0;
+                    this.bestScore = Number(job.progress.bestFitness) || 0;
+                    this.avgScore = Number(job.progress.avgFitness) || 0;
+                    this.modelBestFitness = Number(job.progress.modelBestFitness) || this.bestScore;
+                    this.modelAvgFitness = Number(job.progress.modelAvgFitness) || this.avgScore;
+                    this.top10AvgScore = Number(job.progress.top10AvgScore) || this.avgScore;
+                    this.medianScore = Number(job.progress.medianScore) || this.avgScore;
+                    this.bestFitness = this.bestScore;
+                    this.avgFitness = this.avgScore;
 
                     if (Number.isFinite(Number(job.progress.totalGenerations)) && Number(job.progress.totalGenerations) > 0) {
                         this.totalGenerations = Number(job.progress.totalGenerations);
                     }
 
+                    this.currentChromosomeTotal = Number(job.progress.chromosomeTotal) || 0;
+
                     this.updateStats();
                     this.updateProgressBar();
-                    this.updatePopulationChart(Number(job.progress.chromosomeTotal) || 0);
-                }
-
-                if (!job.progress && job.result) {
-                    this.applyEvolutionResultStats(job.result);
+                    this.updatePopulationChart(this.currentChromosomeTotal, this.bestFitness, this.avgFitness);
                 }
             };
 
@@ -387,9 +471,19 @@ class KnightsTour {
     }
 
     applyEvolutionResultStats(evolutionResult) {
+        const solutionLength = Array.isArray(evolutionResult?.solution)
+            ? evolutionResult.solution.length
+            : null;
+
         this.currentGeneration = Number(evolutionResult?.generationsExecuted) || 0;
-        this.bestFitness = Number(evolutionResult?.bestFitness) || 0;
-        this.avgFitness = Number(evolutionResult?.avgFitness) || 0;
+        this.bestScore = Number(evolutionResult?.bestFitness) || (Number.isInteger(solutionLength) ? solutionLength : 0);
+        this.avgScore = Number(evolutionResult?.avgFitness) || 0;
+        this.modelBestFitness = Number(evolutionResult?.modelBestFitness) || this.bestScore;
+        this.modelAvgFitness = Number(evolutionResult?.modelAvgFitness) || this.avgScore;
+        this.top10AvgScore = Number(evolutionResult?.top10AvgScore) || this.avgScore;
+        this.medianScore = Number(evolutionResult?.medianScore) || this.avgScore;
+        this.bestFitness = this.bestScore;
+        this.avgFitness = this.avgScore;
 
         if (this.totalGenerations > 0) {
             this.currentGeneration = Math.min(this.currentGeneration, this.totalGenerations);
@@ -399,6 +493,18 @@ class KnightsTour {
 
         this.updateStats();
         this.updateProgressBar();
+        this.updatePopulationChart(this.currentChromosomeTotal, this.bestScore, this.avgScore);
+    }
+
+    normalizeEvolutionSolution(evolutionResult) {
+        const normalized = this.normalizeStoredSolution(evolutionResult?.solution);
+        const reportedFitness = Number(evolutionResult?.bestFitness);
+
+        if (Number.isInteger(reportedFitness) && reportedFitness > 0 && normalized.length > reportedFitness) {
+            return normalized.slice(0, reportedFitness);
+        }
+
+        return normalized;
     }
 
     closeJobEventSource() {
@@ -567,27 +673,69 @@ class KnightsTour {
     }
 
     updateStats() {
-        this.statsView.setGenerationStats(this.currentGeneration, this.bestFitness, this.avgFitness);
+        this.statsView.setGenerationStats(this.currentGeneration, this.bestFitness, this.avgFitness, {
+            modelBestFitness: this.modelBestFitness,
+            modelAvgFitness: this.modelAvgFitness,
+            top10AvgScore: this.top10AvgScore,
+            medianScore: this.medianScore
+        });
     }
 
     updateProgressBar() {
         this.statsView.setProgress(this.currentGeneration, this.totalGenerations);
     }
 
-    updatePopulationChart(chromosomeTotal) {
-        this.populationChartView.update(this.currentGeneration, chromosomeTotal);
+    updatePopulationChart(chromosomeTotal, bestFitness, avgFitness) {
+        this.populationChartView.update(this.currentGeneration, chromosomeTotal, bestFitness, avgFitness);
     }
 
     preparePendingScore(config, evolutionResult) {
         const score = new Score(config);
-        score.setFitness(evolutionResult.bestFitness);
-        score.setAverageFitness(evolutionResult.avgFitness);
+        score.setFitness(this.bestScore);
+        score.setAverageFitness(this.avgScore);
         score.setGeneration(evolutionResult.generationsExecuted);
         score.setCreatedAt(new Date());
-        score.setSolution(evolutionResult.solution);
+        score.setSolution(this.solution);
+        score.setModelBestFitness(this.modelBestFitness);
+        score.setModelAvgFitness(this.modelAvgFitness);
+        score.setTop10AvgScore(this.top10AvgScore);
+        score.setMedianScore(this.medianScore);
 
         this.pendingScore = score;
         return score;
+    }
+
+    buildScorePayload(score) {
+        const source = score && typeof score.toJSON === 'function' ? score.toJSON() : score;
+        const config = this.currentConfig || {};
+
+        return {
+            id: Number(source?.id) || null,
+            fitness: Number(source?.fitness) || 0,
+            averageFitness: Number(source?.averageFitness) || 0,
+            generation: Number(source?.generation) || 0,
+            createdAt: source?.createdAt || new Date(),
+            solution: Array.isArray(source?.solution) ? source.solution : [],
+            generations: Number(config.generations ?? source?.generations) || 0,
+            chromosomes: Number(config.chromosomes ?? source?.chromosomes) || 0,
+            selectionRate: Number(config.selectionRate ?? source?.selectionRate) || 0,
+            crossoverRate: Number(config.crossoverRate ?? source?.crossoverRate) || 0,
+            mutationRate: Number(config.mutationRate ?? source?.mutationRate) || 0,
+            seriesPerMutation: Number(config.seriesPerMutation ?? source?.seriesPerMutation) || 0,
+            lifeExpectancy: Number(config.lifeExpectancy ?? source?.lifeExpectancy) || 0,
+            activateLifeExpectancy: Boolean(config.activateLifeExpectancy ?? source?.activateLifeExpectancy),
+            processingOption: config.processingOption || source?.processingOption || 'rotation',
+            enableAdaptiveMutationOnPlateau: Boolean(config.enableAdaptiveMutationOnPlateau ?? source?.enableAdaptiveMutationOnPlateau),
+            plateauMutationRate: Number(config.plateauMutationRate ?? source?.plateauMutationRate) || 0,
+            enablePartialRestart: Boolean(config.enablePartialRestart ?? source?.enablePartialRestart),
+            plateauGenerations: Number(config.plateauGenerations ?? source?.plateauGenerations) || 0,
+            restartEliteCount: Number(config.restartEliteCount ?? source?.restartEliteCount) || 0,
+            restartPopulationRate: Number(config.restartPopulationRate ?? source?.restartPopulationRate) || 0,
+            modelBestFitness: Number(this.modelBestFitness ?? source?.modelBestFitness) || 0,
+            modelAvgFitness: Number(this.modelAvgFitness ?? source?.modelAvgFitness) || 0,
+            top10AvgScore: Number(this.top10AvgScore ?? source?.top10AvgScore) || 0,
+            medianScore: Number(this.medianScore ?? source?.medianScore) || 0
+        };
     }
 
     async saveScore(event) {
@@ -605,12 +753,14 @@ class KnightsTour {
         this.statsView.setSaveStatus('Sending data to the server...', 'primary');
 
         try {
+            const payloadToSave = this.buildScorePayload(this.pendingScore);
+
             const response = await fetch(SCORE_API_URL, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(this.pendingScore)
+                body: JSON.stringify(payloadToSave)
             });
 
             const payload = await response.json();
@@ -687,6 +837,65 @@ class KnightsTour {
                 && step.col < this.boardSize);
     }
 
+    applyScoreConfigToForm(score) {
+        if (!score || typeof score !== 'object') return;
+
+        const setNumeric = (id, value) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const num = Number(value);
+            if (Number.isFinite(num)) {
+                el.value = String(num);
+            }
+        };
+
+        const setChecked = (id, value) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.checked = Boolean(value);
+        };
+
+        setNumeric('generations', score.generations);
+        setNumeric('chromosomes', score.chromosomes);
+        setNumeric('selectionRate', score.selectionRate);
+        setNumeric('crossoverRate', score.crossoverRate);
+        setNumeric('mutationRate', score.mutationRate);
+        setNumeric('seriesPerMutation', score.seriesPerMutation);
+        setNumeric('lifeExpectancy', score.lifeExpectancy);
+        setChecked('activateLifeExpectancy', score.activateLifeExpectancy);
+
+        const processingOption = score.processingOption === 'elitist' ? 'elitist' : 'rotation';
+        const processingInput = document.getElementById(processingOption);
+        if (processingInput) {
+            processingInput.checked = true;
+        }
+
+        setChecked('enableAdaptiveMutationOnPlateau', score.enableAdaptiveMutationOnPlateau);
+        setNumeric('plateauMutationRate', score.plateauMutationRate);
+
+        setChecked('enablePartialRestart', score.enablePartialRestart);
+        setNumeric('plateauGenerations', score.plateauGenerations);
+        setNumeric('restartEliteCount', score.restartEliteCount);
+        setNumeric('restartPopulationRate', score.restartPopulationRate);
+
+        const adaptiveToggle = document.getElementById('enableAdaptiveMutationOnPlateau');
+        const plateauMutationInput = document.getElementById('plateauMutationRate');
+        if (adaptiveToggle && plateauMutationInput) {
+            plateauMutationInput.disabled = !adaptiveToggle.checked;
+        }
+
+        const partialRestartToggle = document.getElementById('enablePartialRestart');
+        const plateauInput = document.getElementById('plateauGenerations');
+        const eliteInput = document.getElementById('restartEliteCount');
+        const populationRateInput = document.getElementById('restartPopulationRate');
+        if (partialRestartToggle && plateauInput && eliteInput && populationRateInput) {
+            const enabled = partialRestartToggle.checked;
+            plateauInput.disabled = !enabled;
+            eliteInput.disabled = !enabled;
+            populationRateInput.disabled = !enabled;
+        }
+    }
+
     async applyScoreFromHistory(scoreId) {
         if (this.isRunning) {
             this.statsView.setScoresError('Wait for the current processing to finish before applying a score.');
@@ -704,6 +913,8 @@ class KnightsTour {
             return;
         }
 
+        this.applyScoreConfigToForm(score);
+
         const solution = this.normalizeStoredSolution(score.solution);
         if (solution.length === 0) {
             this.statsView.setScoresError('This score does not contain a valid solution to display.');
@@ -716,6 +927,12 @@ class KnightsTour {
         this.currentGeneration = Number(score.generation) || 0;
         this.bestFitness = Number(score.fitness) || 0;
         this.avgFitness = Number(score.averageFitness) || 0;
+        this.bestScore = this.bestFitness;
+        this.avgScore = this.avgFitness;
+        this.modelBestFitness = Number(score.modelBestFitness) || this.bestFitness;
+        this.modelAvgFitness = Number(score.modelAvgFitness) || this.avgFitness;
+        this.top10AvgScore = Number(score.top10AvgScore) || this.avgScore;
+        this.medianScore = Number(score.medianScore) || this.avgScore;
         this.totalGenerations = Number(score.generations) || Math.max(1, this.currentGeneration);
 
         this.updateStats();
@@ -795,14 +1012,50 @@ class KnightsTour {
         }
     }
 
-    reset() {
+    reset(options = {}) {
+        const { resetForm = false } = options;
+
+        if (resetForm) {
+            const configForm = document.getElementById('configForm');
+            if (configForm) {
+                configForm.reset();
+            }
+
+            const adaptiveToggle = document.getElementById('enableAdaptiveMutationOnPlateau');
+            const plateauMutationInput = document.getElementById('plateauMutationRate');
+            if (adaptiveToggle && plateauMutationInput) {
+                plateauMutationInput.disabled = !adaptiveToggle.checked;
+            }
+
+            const partialRestartToggle = document.getElementById('enablePartialRestart');
+            const plateauInput = document.getElementById('plateauGenerations');
+            const eliteInput = document.getElementById('restartEliteCount');
+            const populationRateInput = document.getElementById('restartPopulationRate');
+            if (partialRestartToggle && plateauInput && eliteInput && populationRateInput) {
+                const enabled = partialRestartToggle.checked;
+                plateauInput.disabled = !enabled;
+                eliteInput.disabled = !enabled;
+                populationRateInput.disabled = !enabled;
+            }
+
+            this.syncAnimationSpeedFromSlider();
+        }
+
         this.stopAnimationPlayback(true);
         this.closeJobEventSource();
         this.currentJobId = null;
+        this.pendingStopRequest = false;
 
         this.currentGeneration = 0;
+        this.bestScore = 0;
+        this.avgScore = 0;
         this.bestFitness = 0;
         this.avgFitness = 0;
+        this.modelBestFitness = 0;
+        this.modelAvgFitness = 0;
+        this.top10AvgScore = 0;
+        this.medianScore = 0;
+        this.currentChromosomeTotal = 0;
         this.stopRequested = false;
         this.solution = [];
         this.currentConfig = null;

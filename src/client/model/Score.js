@@ -21,6 +21,18 @@ class Score {
         this.lifeExpectancy = Number(configForm.lifeExpectancy) || 0;
         this.activateLifeExpectancy = Boolean(configForm.activateLifeExpectancy);
         this.processingOption = configForm.processingOption || 'rotation';
+        this.enableAdaptiveMutationOnPlateau = Boolean(configForm.enableAdaptiveMutationOnPlateau);
+        this.plateauMutationRate = Number(configForm.plateauMutationRate) || 0;
+        this.enablePartialRestart = Boolean(configForm.enablePartialRestart);
+        this.plateauGenerations = Number(configForm.plateauGenerations) || 0;
+        this.restartEliteCount = Number(configForm.restartEliteCount) || 0;
+        this.restartPopulationRate = Number(configForm.restartPopulationRate) || 0;
+
+        // Distribution and model metrics persisted with the run.
+        this.modelBestFitness = Number(configForm.modelBestFitness) || 0;
+        this.modelAvgFitness = Number(configForm.modelAvgFitness) || 0;
+        this.top10AvgScore = Number(configForm.top10AvgScore) || 0;
+        this.medianScore = Number(configForm.medianScore) || 0;
     }
 
     getId() {
@@ -143,6 +155,86 @@ class Score {
         this.processingOption = processingOption || 'rotation';
     }
 
+    getEnableAdaptiveMutationOnPlateau() {
+        return this.enableAdaptiveMutationOnPlateau;
+    }
+
+    setEnableAdaptiveMutationOnPlateau(enableAdaptiveMutationOnPlateau) {
+        this.enableAdaptiveMutationOnPlateau = Boolean(enableAdaptiveMutationOnPlateau);
+    }
+
+    getPlateauMutationRate() {
+        return this.plateauMutationRate;
+    }
+
+    setPlateauMutationRate(plateauMutationRate) {
+        this.plateauMutationRate = Number(plateauMutationRate) || 0;
+    }
+
+    getEnablePartialRestart() {
+        return this.enablePartialRestart;
+    }
+
+    setEnablePartialRestart(enablePartialRestart) {
+        this.enablePartialRestart = Boolean(enablePartialRestart);
+    }
+
+    getPlateauGenerations() {
+        return this.plateauGenerations;
+    }
+
+    setPlateauGenerations(plateauGenerations) {
+        this.plateauGenerations = Number(plateauGenerations) || 0;
+    }
+
+    getRestartEliteCount() {
+        return this.restartEliteCount;
+    }
+
+    setRestartEliteCount(restartEliteCount) {
+        this.restartEliteCount = Number(restartEliteCount) || 0;
+    }
+
+    getRestartPopulationRate() {
+        return this.restartPopulationRate;
+    }
+
+    setRestartPopulationRate(restartPopulationRate) {
+        this.restartPopulationRate = Number(restartPopulationRate) || 0;
+    }
+
+    getModelBestFitness() {
+        return this.modelBestFitness;
+    }
+
+    setModelBestFitness(modelBestFitness) {
+        this.modelBestFitness = Number(modelBestFitness) || 0;
+    }
+
+    getModelAvgFitness() {
+        return this.modelAvgFitness;
+    }
+
+    setModelAvgFitness(modelAvgFitness) {
+        this.modelAvgFitness = Number(modelAvgFitness) || 0;
+    }
+
+    getTop10AvgScore() {
+        return this.top10AvgScore;
+    }
+
+    setTop10AvgScore(top10AvgScore) {
+        this.top10AvgScore = Number(top10AvgScore) || 0;
+    }
+
+    getMedianScore() {
+        return this.medianScore;
+    }
+
+    setMedianScore(medianScore) {
+        this.medianScore = Number(medianScore) || 0;
+    }
+
     toJSON() {
         return {
             id: this.id,
@@ -159,7 +251,17 @@ class Score {
             seriesPerMutation: this.seriesPerMutation,
             lifeExpectancy: this.lifeExpectancy,
             activateLifeExpectancy: this.activateLifeExpectancy,
-            processingOption: this.processingOption
+            processingOption: this.processingOption,
+            enableAdaptiveMutationOnPlateau: this.enableAdaptiveMutationOnPlateau,
+            plateauMutationRate: this.plateauMutationRate,
+            enablePartialRestart: this.enablePartialRestart,
+            plateauGenerations: this.plateauGenerations,
+            restartEliteCount: this.restartEliteCount,
+            restartPopulationRate: this.restartPopulationRate,
+            modelBestFitness: this.modelBestFitness,
+            modelAvgFitness: this.modelAvgFitness,
+            top10AvgScore: this.top10AvgScore,
+            medianScore: this.medianScore
         };
     }
 }
