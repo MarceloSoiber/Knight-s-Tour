@@ -4,8 +4,7 @@ JavaScript application that explores the Knight's Tour problem using a genetic a
 
 The project includes a visual interface to follow the evolution, tune the search parameters, inspect the board in real time, and control the animation of the discovered solution.
 
-<img width="1069" height="902" alt="image" src="https://github.com/user-attachments/assets/2e814821-2483-4154-8768-548a412faf41" />
-
+<img width="1907" height="933" alt="image" src="https://github.com/user-attachments/assets/c39b3c1a-c7d1-4b12-a61e-01ad646d03d5" />
 
 ## Overview
 
