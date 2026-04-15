@@ -11,8 +11,14 @@
 <body class="bg-dark text-white">
 
     <aside class="sidebar shadow-lg border-end border-secondary">
-        <div class="p-3 border-bottom border-secondary">
-            <h4 class="mb-0 text-primary"><i class="bi bi-horse me-2"></i>Knight's Tour</h4>
+        <div class="sidebar-brand p-3 border-bottom border-secondary">
+            <div class="sidebar-brand-mark" aria-hidden="true">
+                <span class="sidebar-brand-horse">&#9822;</span>
+            </div>
+            <div>
+                <h4 class="mb-0 sidebar-brand-title">Knight's Tour</h4>
+                <span class="sidebar-brand-subtitle">Genetic Algorithm Lab</span>
+            </div>
         </div>
         
         <form id="configForm" class="p-3">
@@ -133,27 +139,45 @@
             </div>
         </div>
 
-        <div class="row g-3 mb-4">
-            <div class="col-md-3">
-                <div class="stat-card p-3 rounded shadow-sm">
+        <div id="metricsRow" class="row g-2 mb-4 align-items-stretch">
+            <div class="col-6 col-md-3 col-xl">
+                <div class="stat-card p-2 rounded shadow-sm border-start border-primary border-4 h-100" title="Current generation number being processed.">
                     <span class="text-secondary small">Generation</span>
                     <h3 id="currentGeneration" class="mb-0 text-primary">0</h3>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="stat-card p-3 rounded shadow-sm border-start border-success border-4">
-                    <span class="text-secondary small">Best Fitness</span>
+            <div class="col-6 col-md-3 col-xl">
+                <div class="stat-card p-2 rounded shadow-sm border-start border-success border-4 h-100" title="Highest score in the current population. Score is the valid contiguous path length (0 to 64).">
+                    <span class="text-secondary small">Best Score</span>
                     <h3 id="bestFitness" class="mb-0 text-success">0</h3>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="stat-card p-3 rounded shadow-sm border-start border-warning border-4">
-                    <span class="text-secondary small">Avg Fitness</span>
-                    <h3 id="avgFitness" class="mb-0 text-warning">0</h3>
+            <div class="col-6 col-md-3 col-xl">
+                <div class="stat-card avg-score-card p-2 rounded shadow-sm border-start border-warning border-4 h-100" title="Score distribution: average of all chromosomes, top 10% average, and median score.">
+                    <span class="text-secondary small">Avg Score</span>
+                    <div class="avg-score-layout">
+                        <h3 id="avgFitness" class="mb-0 text-warning avg-score-value">0</h3>
+                        <div class="x-small text-secondary avg-score-meta">
+                            <span class="metric-subline">Top10 Avg: <span id="top10AvgScore">0</span></span>
+                            <span class="metric-subline">Median: <span id="medianScore">0</span></span>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="stat-card p-3 rounded shadow-sm border-start border-danger border-4">
+            <div class="col-6 col-md-3 col-xl">
+                <div class="stat-card p-2 rounded shadow-sm border-start border-info border-4 h-100" title="Best internal fitness value used by genetic ordering and selection.">
+                    <span class="text-secondary small">Best Fitness</span>
+                    <h3 id="bestModelFitness" class="mb-0 text-info">0</h3>
+                </div>
+            </div>
+            <div class="col-6 col-md-3 col-xl">
+                <div class="stat-card p-2 rounded shadow-sm border-start border-secondary border-4 h-100" title="Average internal fitness of the full population.">
+                    <span class="text-secondary small">Avg Fitness</span>
+                    <h3 id="avgModelFitness" class="mb-0 text-secondary">0</h3>
+                </div>
+            </div>
+            <div class="col-6 col-md-3 col-xl">
+                <div class="stat-card p-2 rounded shadow-sm border-start border-danger border-4 h-100" title="Visited squares in the displayed best path (current/64).">
                     <span class="text-secondary small">Visited</span>
                     <h3 id="visitedSquares" class="mb-0 text-danger">0/64</h3>
                 </div>
@@ -179,7 +203,7 @@
                 </div>
                 <div class="card shadow chart-card flex-fill">
                     <div class="card-header chart-title">
-                        <span class="fw-bold"><i class="bi bi-graph-up-arrow me-2"></i>Best x Average Fitness</span>
+                        <span class="fw-bold"><i class="bi bi-graph-up-arrow me-2"></i>Best x Average Score</span>
                     </div>
                     <div class="card-body p-2">
                         <canvas id="fitnessChart" height="100"></canvas>
@@ -266,7 +290,7 @@
                 <table class="table table-dark table-sm mb-0 history-table" id="scoresTable">
                     <thead>
                         <tr class="text-secondary small">
-                            <th>Created At</th><th>Fitness</th><th>Avg Fit</th><th>Generations</th><th>Chrom</th><th>Sel. Rate</th><th>Cross. Rate</th><th>Mut. Rate</th><th>Series/Mut</th><th>Life Exp.</th><th>ALE</th><th>Processing</th><th>Actions</th>
+                            <th>Created At</th><th>Score</th><th>Avg Score</th><th>Generations</th><th>Chrom</th><th>Sel. Rate</th><th>Cross. Rate</th><th>Mut. Rate</th><th>Series/Mut</th><th>Life Exp.</th><th>ALE</th><th>Processing</th><th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="scoresTableBody"></tbody>

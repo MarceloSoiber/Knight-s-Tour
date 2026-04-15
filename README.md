@@ -25,10 +25,15 @@ At each generation, the system:
 1. Initializes the population with randomized chromosomes.
 2. Sorts individuals by fitness.
 3. Applies crossover between parents to generate new chromosomes.
-4. Performs mutations to explore new combinations.
+4. Performs mutations to explore new combinations, including inversion mutations that preserve sub-routes.
 5. Applies life-span rules when that option is enabled.
 6. Detects stagnation and can trigger a partial restart with elite preservation.
 7. Updates the interface statistics and continues until the generation limit is reached or a full path is found.
+
+**Advanced Features:**
+
+- **Warnsdorff's Rule Heuristic**: Guides the search toward more challenging routes by penalizing squares with many available options. Uses a `1/(options+1)` model to prefer constrained positions that typically lead to longer valid paths.
+- **Inversion Mutation**: Advanced mutation operator that inverts chromosome segments between two points instead of simple swaps. Uses a 50% chance of inversion vs 50% swap during mutation, preserving valuable sub-routes better than pure transposition. Guided mutation focuses on conflictIndex ±3 with 75% probability.
 
 Generation processing runs as an asynchronous backend job. The client creates a job, subscribes to server-sent events for progress updates, and can request cancellation while processing is running.
 
@@ -161,14 +166,34 @@ project-root/
 │       ├── server.ts        # HTTP API entrypoint
 │       │
 │       ├── controller/
-│       │   └── GenerationController.ts   # Request orchestration
+│       │   └── GenerationController.ts   # Request orchestration and job management
+│       │
+│       ├── domain/
+│       │   └── KnightBoard.ts            # Knight movement validation and board logic
+│       │
+│       ├── engine/
+│       │   ├── GAEngine.ts               # Main genetic algorithm orchestrator
+│       │   ├── PopulationManager.ts      # Population initialization and management
+│       │   │
+│       │   ├── fitness/
+│       │   │   └── FitnessEvaluator.ts   # Warnsdorff heuristic and path evaluation
+│       │   │
+│       │   ├── selection/
+│       │   │   ├── ElitistSelector.ts    # Elite selection strategy
+│       │   │   └── RouletteSelector.ts   # Random roulette selection
+│       │   │
+│       │   ├── crossover/
+│       │   │   └── Crossover.ts          # Parent recombination operators
+│       │   │
+│       │   └── mutation/
+│       │       └── Mutation.ts           # Swap and inversion mutations
 │       │
 │       ├── service/
-│       │   ├── GenerationService.ts      # Genetic algorithm logic
+│       │   ├── GenerationService.ts      # Job orchestration and iteration control
 │       │   └── Score.ts                  # SQLite persistence layer
 │       │
 │       └── model/
-│           ├── Chromosome.ts             # Domain model
+│           ├── Chromosome.ts             # Domain model and genetic representation
 │           └── Score.ts                  # Backend score entity
 ```
 ## Notes

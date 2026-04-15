@@ -29,6 +29,8 @@ type GenerationProgress = {
   avgFitness: number;
   modelBestFitness?: number;
   modelAvgFitness?: number;
+  top10AvgScore?: number;
+  medianScore?: number;
   chromosomeTotal: number;
   totalGenerations: number;
 };

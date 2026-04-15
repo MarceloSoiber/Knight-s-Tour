@@ -3,6 +3,10 @@ class StatsView {
         this.currentGenerationEl = document.getElementById('currentGeneration');
         this.bestFitnessEl = document.getElementById('bestFitness');
         this.avgFitnessEl = document.getElementById('avgFitness');
+        this.bestModelFitnessEl = document.getElementById('bestModelFitness');
+        this.avgModelFitnessEl = document.getElementById('avgModelFitness');
+        this.top10AvgScoreEl = document.getElementById('top10AvgScore');
+        this.medianScoreEl = document.getElementById('medianScore');
         this.visitedSquaresEl = document.getElementById('visitedSquares');
         this.progressBarEl = document.getElementById('progressBar');
         this.progressPercentEl = document.getElementById('progressPercent');
@@ -131,10 +135,25 @@ class StatsView {
         this.saveScoreBtn.innerHTML = '<i class="bi bi-save"></i> Save data';
     }
 
-    setGenerationStats(currentGeneration, bestFitness, avgFitness) {
+    setGenerationStats(currentGeneration, bestFitness, avgFitness, metrics = {}) {
+        const bestModelFitness = Number(metrics.modelBestFitness) || bestFitness;
+        const avgModelFitness = Number(metrics.modelAvgFitness) || avgFitness;
+        const top10AvgScore = Number(metrics.top10AvgScore) || avgFitness;
+        const medianScore = Number(metrics.medianScore) || avgFitness;
+
         if (this.currentGenerationEl) this.currentGenerationEl.textContent = String(currentGeneration);
+
         if (this.bestFitnessEl) this.bestFitnessEl.textContent = String(Math.floor(bestFitness));
         if (this.avgFitnessEl) this.avgFitnessEl.textContent = String(Math.floor(avgFitness));
+        if (this.bestModelFitnessEl) this.bestModelFitnessEl.textContent = String(Math.floor(bestModelFitness));
+        if (this.avgModelFitnessEl) this.avgModelFitnessEl.textContent = String(Math.floor(avgModelFitness));
+
+        if (this.avgFitnessEl) {
+            this.avgFitnessEl.title = `Avg Score: ${Math.floor(avgFitness)} | Top10 Avg Score: ${Math.floor(top10AvgScore)} | Median Score: ${Math.floor(medianScore)}`;
+        }
+
+        if (this.top10AvgScoreEl) this.top10AvgScoreEl.textContent = String(Math.floor(top10AvgScore));
+        if (this.medianScoreEl) this.medianScoreEl.textContent = String(Math.floor(medianScore));
     }
 
     setProgress(currentGeneration, totalGenerations) {
@@ -177,7 +196,7 @@ class StatsView {
 
     showEvolutionCompleted(generationsExecuted, bestFitness) {
         this.setResultStatus(
-            `Evolution completed in ${generationsExecuted} generations. Best fitness: ${bestFitness}/64`,
+            `Evolution completed in ${generationsExecuted} generations. Best score: ${Math.floor(bestFitness)}/64`,
             'info',
             'cpu'
         );
