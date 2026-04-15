@@ -6,6 +6,8 @@ export type GenerationCallbacks = {
 		generation: number;
 		bestFitness: number;
 		avgFitness: number;
+		modelBestFitness?: number;
+		modelAvgFitness?: number;
 		chromosomeTotal: number;
 		totalGenerations: number;
 	}) => void;
@@ -66,7 +68,7 @@ class GenerationService {
 			return {
 				generationsExecuted: 0,
 				bestFitness: best?.getScore() ?? 0,
-				avgFitness: this.population.length > 0 ? this.calculateAverageFitness() : 0,
+				avgFitness: this.population.length > 0 ? this.calculateAverageScore() : 0,
 				solution: best ? this.extractValidPath(best.getSolution()) : [],
 				stopped: true
 			};
@@ -109,8 +111,11 @@ class GenerationService {
 			generation++;
 
 			this.sortPopulation();
-			let bestFitness = this.getBestChromosomeByScore()?.getScore() ?? 0;
-			let avgFitness = this.calculateAverageFitness();
+			let best = this.getBestChromosomeByScore();
+			let bestFitness = best?.getScore() ?? 0;
+			let avgFitness = this.calculateAverageScore();
+			let modelBestFitness = best?.getFitness() ?? 0;
+			let modelAvgFitness = this.calculateAverageFitness();
 
 			if (bestFitness === lastBestFitness) {
 				plateauCounter++;
@@ -121,14 +126,22 @@ class GenerationService {
 			}
 
 			const reachedPlateau = plateauCounter > this.getAdaptivePlateauLimit(cfg.plateauGenerations, bestFitness);
+			let adaptiveMutationApplied = false;
 
 			if (cfg.enableAdaptiveMutationOnPlateau && reachedPlateau) {
-				currentMutationRate = Math.max(cfg.mutationRate, cfg.plateauMutationRate);
+				const nextMutationRate = Math.max(cfg.mutationRate, cfg.plateauMutationRate);
+				adaptiveMutationApplied = nextMutationRate > currentMutationRate;
+				currentMutationRate = nextMutationRate;
+
+				if (adaptiveMutationApplied) {
+					plateauCounter = 0;
+				}
 			}
 
 			if (
 				cfg.enablePartialRestart
 				&& reachedPlateau
+				&& !adaptiveMutationApplied
 			) {
 				if (await this.partialRestartWithElite(cfg, shouldStop)) {
 					stopped = true;
@@ -143,8 +156,11 @@ class GenerationService {
 				}
 
 				this.sortPopulation();
-				bestFitness = this.getBestChromosomeByScore()?.getScore() ?? 0;
-				avgFitness = this.calculateAverageFitness();
+				best = this.getBestChromosomeByScore();
+				bestFitness = best?.getScore() ?? 0;
+				avgFitness = this.calculateAverageScore();
+				modelBestFitness = best?.getFitness() ?? 0;
+				modelAvgFitness = this.calculateAverageFitness();
 				lastBestFitness = bestFitness;
 			}
 
@@ -153,6 +169,8 @@ class GenerationService {
 					generation,
 					bestFitness,
 					avgFitness,
+					modelBestFitness,
+					modelAvgFitness,
 					chromosomeTotal: this.population.length,
 					totalGenerations: cfg.generations
 				});
@@ -180,7 +198,7 @@ class GenerationService {
 		this.sortPopulation();
 		const best = this.getBestChromosomeByScore();
 		const bestFitness = best?.getScore() ?? 0;
-		const avgFitness = this.calculateAverageFitness();
+		const avgFitness = this.calculateAverageScore();
 
 		return {
 			generationsExecuted: generation,
@@ -842,6 +860,12 @@ class GenerationService {
 	}
 
 	private calculateAverageFitness(): number {
+		if (this.population.length === 0) return 0;
+		const total = this.population.reduce((acc, c) => acc + c.getFitness(), 0);
+		return total / this.population.length;
+	}
+
+	private calculateAverageScore(): number {
 		if (this.population.length === 0) return 0;
 		const total = this.population.reduce((acc, c) => acc + c.getScore(), 0);
 		return total / this.population.length;
