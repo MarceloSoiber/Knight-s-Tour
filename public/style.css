@@ -16,6 +16,8 @@
 
 body {
     background: linear-gradient(180deg, var(--bg-main) 0%, var(--bg-main-soft) 100%) !important;
+    background-attachment: fixed;
+    min-height: 100vh;
     color: var(--text-main) !important;
     font-family: 'Trebuchet MS', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
@@ -243,6 +245,7 @@ body {
 .main-content {
     margin-left: 300px;
     padding: 1.75rem;
+    min-height: 100vh;
 }
 
 .dashboard-title {

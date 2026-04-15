@@ -13,10 +13,20 @@ export type ScoreInput = {
   selectionRate?: number;
   crossoverRate?: number;
   mutationRate?: number;
+  enableAdaptiveMutationOnPlateau?: boolean;
+  plateauMutationRate?: number;
   seriesPerMutation?: number;
   lifeExpectancy?: number;
   activateLifeExpectancy?: boolean;
   processingOption?: string;
+  enablePartialRestart?: boolean;
+  plateauGenerations?: number;
+  restartEliteCount?: number;
+  restartPopulationRate?: number;
+  modelBestFitness?: number;
+  modelAvgFitness?: number;
+  top10AvgScore?: number;
+  medianScore?: number;
   createdAt?: string;
 };
 
@@ -32,10 +42,20 @@ export type StoredScore = {
   selectionRate: number;
   crossoverRate: number;
   mutationRate: number;
+  enableAdaptiveMutationOnPlateau: number;
+  plateauMutationRate: number;
   seriesPerMutation: number;
   lifeExpectancy: number;
   activateLifeExpectancy: number;
   processingOption: string;
+  enablePartialRestart: number;
+  plateauGenerations: number;
+  restartEliteCount: number;
+  restartPopulationRate: number;
+  modelBestFitness: number;
+  modelAvgFitness: number;
+  top10AvgScore: number;
+  medianScore: number;
 };
 
 type ScoreClass = new (configForm?: Record<string, unknown>) => {
@@ -50,10 +70,20 @@ type ScoreClass = new (configForm?: Record<string, unknown>) => {
   setSelectionRate?: (selectionRate: number) => void;
   setCrossoverRate?: (crossoverRate: number) => void;
   setMutationRate?: (mutationRate: number) => void;
+  setEnableAdaptiveMutationOnPlateau?: (enableAdaptiveMutationOnPlateau: boolean) => void;
+  setPlateauMutationRate?: (plateauMutationRate: number) => void;
   setSeriesPerMutation?: (seriesPerMutation: number) => void;
   setLifeExpectancy?: (lifeExpectancy: number) => void;
   setActivateLifeExpectancy?: (activateLifeExpectancy: boolean) => void;
   setProcessingOption?: (processingOption: string) => void;
+  setEnablePartialRestart?: (enablePartialRestart: boolean) => void;
+  setPlateauGenerations?: (plateauGenerations: number) => void;
+  setRestartEliteCount?: (restartEliteCount: number) => void;
+  setRestartPopulationRate?: (restartPopulationRate: number) => void;
+  setModelBestFitness?: (modelBestFitness: number) => void;
+  setModelAvgFitness?: (modelAvgFitness: number) => void;
+  setTop10AvgScore?: (top10AvgScore: number) => void;
+  setMedianScore?: (medianScore: number) => void;
   toJSON?: () => unknown;
 };
 
@@ -84,10 +114,20 @@ type StoredScoreDbRow = {
   selectionRate: number;
   crossoverRate: number;
   mutationRate: number;
+  enableAdaptiveMutationOnPlateau: number;
+  plateauMutationRate: number;
   seriesPerMutation: number;
   lifeExpectancy: number;
   activateLifeExpectancy: number;
   processingOption: string;
+  enablePartialRestart: number;
+  plateauGenerations: number;
+  restartEliteCount: number;
+  restartPopulationRate: number;
+  modelBestFitness: number;
+  modelAvgFitness: number;
+  top10AvgScore: number;
+  medianScore: number;
 };
 
 function parseStoredSolution(raw: string | null | undefined): unknown[] {
@@ -132,10 +172,20 @@ export class ScoreService {
     score.setSelectionRate?.(row.selectionRate);
     score.setCrossoverRate?.(row.crossoverRate);
     score.setMutationRate?.(row.mutationRate);
+    score.setEnableAdaptiveMutationOnPlateau?.(Boolean(row.enableAdaptiveMutationOnPlateau));
+    score.setPlateauMutationRate?.(row.plateauMutationRate);
     score.setSeriesPerMutation?.(row.seriesPerMutation);
     score.setLifeExpectancy?.(row.lifeExpectancy);
     score.setActivateLifeExpectancy?.(Boolean(row.activateLifeExpectancy));
     score.setProcessingOption?.(row.processingOption);
+    score.setEnablePartialRestart?.(Boolean(row.enablePartialRestart));
+    score.setPlateauGenerations?.(row.plateauGenerations);
+    score.setRestartEliteCount?.(row.restartEliteCount);
+    score.setRestartPopulationRate?.(row.restartPopulationRate);
+    score.setModelBestFitness?.(row.modelBestFitness);
+    score.setModelAvgFitness?.(row.modelAvgFitness);
+    score.setTop10AvgScore?.(row.top10AvgScore);
+    score.setMedianScore?.(row.medianScore);
 
     return score;
   }
@@ -158,6 +208,19 @@ export class ScoreService {
     await this.renameColumnIfNeeded('scores', 'solucao', 'solution');
   }
 
+  private async addColumnIfMissing(
+    tableName: string,
+    columnName: string,
+    addColumn: (table: Knex.CreateTableBuilder) => void
+  ): Promise<void> {
+    const hasColumn = await this.db.schema.hasColumn(tableName, columnName);
+    if (hasColumn) return;
+
+    await this.db.schema.alterTable(tableName, (table) => {
+      addColumn(table);
+    });
+  }
+
   async setup(): Promise<void> {
     if (this.isSetup) return;
 
@@ -176,10 +239,20 @@ export class ScoreService {
         table.float('selectionRate').notNullable().defaultTo(0);
         table.float('crossoverRate').notNullable().defaultTo(0);
         table.float('mutationRate').notNullable().defaultTo(0);
+        table.boolean('enableAdaptiveMutationOnPlateau').notNullable().defaultTo(false);
+        table.float('plateauMutationRate').notNullable().defaultTo(0);
         table.integer('seriesPerMutation').notNullable().defaultTo(0);
         table.integer('lifeExpectancy').notNullable().defaultTo(0);
         table.boolean('activateLifeExpectancy').notNullable().defaultTo(false);
         table.string('processingOption').notNullable().defaultTo('rotation');
+        table.boolean('enablePartialRestart').notNullable().defaultTo(false);
+        table.integer('plateauGenerations').notNullable().defaultTo(0);
+        table.integer('restartEliteCount').notNullable().defaultTo(0);
+        table.float('restartPopulationRate').notNullable().defaultTo(0);
+        table.float('modelBestFitness').notNullable().defaultTo(0);
+        table.float('modelAvgFitness').notNullable().defaultTo(0);
+        table.float('top10AvgScore').notNullable().defaultTo(0);
+        table.float('medianScore').notNullable().defaultTo(0);
       });
     } else {
       await this.migrateLegacyColumns();
@@ -190,6 +263,37 @@ export class ScoreService {
           table.text('solution').notNullable().defaultTo('[]');
         });
       }
+
+      await this.addColumnIfMissing('scores', 'enableAdaptiveMutationOnPlateau', (table) => {
+        table.boolean('enableAdaptiveMutationOnPlateau').notNullable().defaultTo(false);
+      });
+      await this.addColumnIfMissing('scores', 'plateauMutationRate', (table) => {
+        table.float('plateauMutationRate').notNullable().defaultTo(0);
+      });
+      await this.addColumnIfMissing('scores', 'enablePartialRestart', (table) => {
+        table.boolean('enablePartialRestart').notNullable().defaultTo(false);
+      });
+      await this.addColumnIfMissing('scores', 'plateauGenerations', (table) => {
+        table.integer('plateauGenerations').notNullable().defaultTo(0);
+      });
+      await this.addColumnIfMissing('scores', 'restartEliteCount', (table) => {
+        table.integer('restartEliteCount').notNullable().defaultTo(0);
+      });
+      await this.addColumnIfMissing('scores', 'restartPopulationRate', (table) => {
+        table.float('restartPopulationRate').notNullable().defaultTo(0);
+      });
+      await this.addColumnIfMissing('scores', 'modelBestFitness', (table) => {
+        table.float('modelBestFitness').notNullable().defaultTo(0);
+      });
+      await this.addColumnIfMissing('scores', 'modelAvgFitness', (table) => {
+        table.float('modelAvgFitness').notNullable().defaultTo(0);
+      });
+      await this.addColumnIfMissing('scores', 'top10AvgScore', (table) => {
+        table.float('top10AvgScore').notNullable().defaultTo(0);
+      });
+      await this.addColumnIfMissing('scores', 'medianScore', (table) => {
+        table.float('medianScore').notNullable().defaultTo(0);
+      });
     }
 
     this.isSetup = true;
@@ -210,10 +314,20 @@ export class ScoreService {
       selectionRate: Number(input.selectionRate) || 0,
       crossoverRate: Number(input.crossoverRate) || 0,
       mutationRate: Number(input.mutationRate) || 0,
+      enableAdaptiveMutationOnPlateau: input.enableAdaptiveMutationOnPlateau ? 1 : 0,
+      plateauMutationRate: Number(input.plateauMutationRate) || 0,
       seriesPerMutation: Number(input.seriesPerMutation) || 0,
       lifeExpectancy: Number(input.lifeExpectancy) || 0,
       activateLifeExpectancy: input.activateLifeExpectancy ? 1 : 0,
       processingOption: input.processingOption || 'rotation',
+      enablePartialRestart: input.enablePartialRestart ? 1 : 0,
+      plateauGenerations: Number(input.plateauGenerations) || 0,
+      restartEliteCount: Number(input.restartEliteCount) || 0,
+      restartPopulationRate: Number(input.restartPopulationRate) || 0,
+      modelBestFitness: Number(input.modelBestFitness) || 0,
+      modelAvgFitness: Number(input.modelAvgFitness) || 0,
+      top10AvgScore: Number(input.top10AvgScore) || 0,
+      medianScore: Number(input.medianScore) || 0,
     };
 
     const inserted = await this.db('scores').insert(row);

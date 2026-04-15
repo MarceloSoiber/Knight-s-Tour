@@ -61,7 +61,7 @@ class KnightsTour {
         this.controlsView.bind({
             onStart: () => this.startEvolution(),
             onStop: () => this.requestStop(),
-            onReset: () => this.reset(),
+            onReset: () => this.reset({ resetForm: true }),
             onPause: () => this.togglePause(),
             onPrev: () => this.stepBackward(),
             onNext: () => this.stepForward(),
@@ -247,7 +247,7 @@ class KnightsTour {
         
         if (this.isRunning) return;
 
-        this.reset();
+        this.reset({ resetForm: false });
         
         this.isRunning = true;
         this.stopRequested = false;
@@ -696,9 +696,46 @@ class KnightsTour {
         score.setGeneration(evolutionResult.generationsExecuted);
         score.setCreatedAt(new Date());
         score.setSolution(this.solution);
+        score.setModelBestFitness(this.modelBestFitness);
+        score.setModelAvgFitness(this.modelAvgFitness);
+        score.setTop10AvgScore(this.top10AvgScore);
+        score.setMedianScore(this.medianScore);
 
         this.pendingScore = score;
         return score;
+    }
+
+    buildScorePayload(score) {
+        const source = score && typeof score.toJSON === 'function' ? score.toJSON() : score;
+        const config = this.currentConfig || {};
+
+        return {
+            id: Number(source?.id) || null,
+            fitness: Number(source?.fitness) || 0,
+            averageFitness: Number(source?.averageFitness) || 0,
+            generation: Number(source?.generation) || 0,
+            createdAt: source?.createdAt || new Date(),
+            solution: Array.isArray(source?.solution) ? source.solution : [],
+            generations: Number(config.generations ?? source?.generations) || 0,
+            chromosomes: Number(config.chromosomes ?? source?.chromosomes) || 0,
+            selectionRate: Number(config.selectionRate ?? source?.selectionRate) || 0,
+            crossoverRate: Number(config.crossoverRate ?? source?.crossoverRate) || 0,
+            mutationRate: Number(config.mutationRate ?? source?.mutationRate) || 0,
+            seriesPerMutation: Number(config.seriesPerMutation ?? source?.seriesPerMutation) || 0,
+            lifeExpectancy: Number(config.lifeExpectancy ?? source?.lifeExpectancy) || 0,
+            activateLifeExpectancy: Boolean(config.activateLifeExpectancy ?? source?.activateLifeExpectancy),
+            processingOption: config.processingOption || source?.processingOption || 'rotation',
+            enableAdaptiveMutationOnPlateau: Boolean(config.enableAdaptiveMutationOnPlateau ?? source?.enableAdaptiveMutationOnPlateau),
+            plateauMutationRate: Number(config.plateauMutationRate ?? source?.plateauMutationRate) || 0,
+            enablePartialRestart: Boolean(config.enablePartialRestart ?? source?.enablePartialRestart),
+            plateauGenerations: Number(config.plateauGenerations ?? source?.plateauGenerations) || 0,
+            restartEliteCount: Number(config.restartEliteCount ?? source?.restartEliteCount) || 0,
+            restartPopulationRate: Number(config.restartPopulationRate ?? source?.restartPopulationRate) || 0,
+            modelBestFitness: Number(this.modelBestFitness ?? source?.modelBestFitness) || 0,
+            modelAvgFitness: Number(this.modelAvgFitness ?? source?.modelAvgFitness) || 0,
+            top10AvgScore: Number(this.top10AvgScore ?? source?.top10AvgScore) || 0,
+            medianScore: Number(this.medianScore ?? source?.medianScore) || 0
+        };
     }
 
     async saveScore(event) {
@@ -716,12 +753,14 @@ class KnightsTour {
         this.statsView.setSaveStatus('Sending data to the server...', 'primary');
 
         try {
+            const payloadToSave = this.buildScorePayload(this.pendingScore);
+
             const response = await fetch(SCORE_API_URL, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(this.pendingScore)
+                body: JSON.stringify(payloadToSave)
             });
 
             const payload = await response.json();
@@ -798,6 +837,65 @@ class KnightsTour {
                 && step.col < this.boardSize);
     }
 
+    applyScoreConfigToForm(score) {
+        if (!score || typeof score !== 'object') return;
+
+        const setNumeric = (id, value) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const num = Number(value);
+            if (Number.isFinite(num)) {
+                el.value = String(num);
+            }
+        };
+
+        const setChecked = (id, value) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.checked = Boolean(value);
+        };
+
+        setNumeric('generations', score.generations);
+        setNumeric('chromosomes', score.chromosomes);
+        setNumeric('selectionRate', score.selectionRate);
+        setNumeric('crossoverRate', score.crossoverRate);
+        setNumeric('mutationRate', score.mutationRate);
+        setNumeric('seriesPerMutation', score.seriesPerMutation);
+        setNumeric('lifeExpectancy', score.lifeExpectancy);
+        setChecked('activateLifeExpectancy', score.activateLifeExpectancy);
+
+        const processingOption = score.processingOption === 'elitist' ? 'elitist' : 'rotation';
+        const processingInput = document.getElementById(processingOption);
+        if (processingInput) {
+            processingInput.checked = true;
+        }
+
+        setChecked('enableAdaptiveMutationOnPlateau', score.enableAdaptiveMutationOnPlateau);
+        setNumeric('plateauMutationRate', score.plateauMutationRate);
+
+        setChecked('enablePartialRestart', score.enablePartialRestart);
+        setNumeric('plateauGenerations', score.plateauGenerations);
+        setNumeric('restartEliteCount', score.restartEliteCount);
+        setNumeric('restartPopulationRate', score.restartPopulationRate);
+
+        const adaptiveToggle = document.getElementById('enableAdaptiveMutationOnPlateau');
+        const plateauMutationInput = document.getElementById('plateauMutationRate');
+        if (adaptiveToggle && plateauMutationInput) {
+            plateauMutationInput.disabled = !adaptiveToggle.checked;
+        }
+
+        const partialRestartToggle = document.getElementById('enablePartialRestart');
+        const plateauInput = document.getElementById('plateauGenerations');
+        const eliteInput = document.getElementById('restartEliteCount');
+        const populationRateInput = document.getElementById('restartPopulationRate');
+        if (partialRestartToggle && plateauInput && eliteInput && populationRateInput) {
+            const enabled = partialRestartToggle.checked;
+            plateauInput.disabled = !enabled;
+            eliteInput.disabled = !enabled;
+            populationRateInput.disabled = !enabled;
+        }
+    }
+
     async applyScoreFromHistory(scoreId) {
         if (this.isRunning) {
             this.statsView.setScoresError('Wait for the current processing to finish before applying a score.');
@@ -815,6 +913,8 @@ class KnightsTour {
             return;
         }
 
+        this.applyScoreConfigToForm(score);
+
         const solution = this.normalizeStoredSolution(score.solution);
         if (solution.length === 0) {
             this.statsView.setScoresError('This score does not contain a valid solution to display.');
@@ -829,10 +929,10 @@ class KnightsTour {
         this.avgFitness = Number(score.averageFitness) || 0;
         this.bestScore = this.bestFitness;
         this.avgScore = this.avgFitness;
-        this.modelBestFitness = this.bestFitness;
-        this.modelAvgFitness = this.avgFitness;
-        this.top10AvgScore = this.avgScore;
-        this.medianScore = this.avgScore;
+        this.modelBestFitness = Number(score.modelBestFitness) || this.bestFitness;
+        this.modelAvgFitness = Number(score.modelAvgFitness) || this.avgFitness;
+        this.top10AvgScore = Number(score.top10AvgScore) || this.avgScore;
+        this.medianScore = Number(score.medianScore) || this.avgScore;
         this.totalGenerations = Number(score.generations) || Math.max(1, this.currentGeneration);
 
         this.updateStats();
@@ -912,15 +1012,49 @@ class KnightsTour {
         }
     }
 
-    reset() {
+    reset(options = {}) {
+        const { resetForm = false } = options;
+
+        if (resetForm) {
+            const configForm = document.getElementById('configForm');
+            if (configForm) {
+                configForm.reset();
+            }
+
+            const adaptiveToggle = document.getElementById('enableAdaptiveMutationOnPlateau');
+            const plateauMutationInput = document.getElementById('plateauMutationRate');
+            if (adaptiveToggle && plateauMutationInput) {
+                plateauMutationInput.disabled = !adaptiveToggle.checked;
+            }
+
+            const partialRestartToggle = document.getElementById('enablePartialRestart');
+            const plateauInput = document.getElementById('plateauGenerations');
+            const eliteInput = document.getElementById('restartEliteCount');
+            const populationRateInput = document.getElementById('restartPopulationRate');
+            if (partialRestartToggle && plateauInput && eliteInput && populationRateInput) {
+                const enabled = partialRestartToggle.checked;
+                plateauInput.disabled = !enabled;
+                eliteInput.disabled = !enabled;
+                populationRateInput.disabled = !enabled;
+            }
+
+            this.syncAnimationSpeedFromSlider();
+        }
+
         this.stopAnimationPlayback(true);
         this.closeJobEventSource();
         this.currentJobId = null;
         this.pendingStopRequest = false;
 
         this.currentGeneration = 0;
+        this.bestScore = 0;
+        this.avgScore = 0;
         this.bestFitness = 0;
         this.avgFitness = 0;
+        this.modelBestFitness = 0;
+        this.modelAvgFitness = 0;
+        this.top10AvgScore = 0;
+        this.medianScore = 0;
         this.currentChromosomeTotal = 0;
         this.stopRequested = false;
         this.solution = [];

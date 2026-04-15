@@ -9,10 +9,20 @@ export type ScoreConfig = {
   selectionRate?: number;
   crossoverRate?: number;
   mutationRate?: number;
+  enableAdaptiveMutationOnPlateau?: boolean;
+  plateauMutationRate?: number;
   seriesPerMutation?: number;
   lifeExpectancy?: number;
   activateLifeExpectancy?: boolean;
   processingOption?: string;
+  enablePartialRestart?: boolean;
+  plateauGenerations?: number;
+  restartEliteCount?: number;
+  restartPopulationRate?: number;
+  modelBestFitness?: number;
+  modelAvgFitness?: number;
+  top10AvgScore?: number;
+  medianScore?: number;
 };
 
 class Score {
@@ -29,10 +39,20 @@ class Score {
   private selectionRate: number;
   private crossoverRate: number;
   private mutationRate: number;
+  private enableAdaptiveMutationOnPlateau: boolean;
+  private plateauMutationRate: number;
   private seriesPerMutation: number;
   private lifeExpectancy: number;
   private activateLifeExpectancy: boolean;
   private processingOption: string;
+  private enablePartialRestart: boolean;
+  private plateauGenerations: number;
+  private restartEliteCount: number;
+  private restartPopulationRate: number;
+  private modelBestFitness: number;
+  private modelAvgFitness: number;
+  private top10AvgScore: number;
+  private medianScore: number;
 
   constructor(configForm: ScoreConfig = {}) {
     this.id = null;
@@ -47,10 +67,20 @@ class Score {
     this.selectionRate = Number(configForm.selectionRate) || 0;
     this.crossoverRate = Number(configForm.crossoverRate) || 0;
     this.mutationRate = Number(configForm.mutationRate) || 0;
+    this.enableAdaptiveMutationOnPlateau = Boolean(configForm.enableAdaptiveMutationOnPlateau);
+    this.plateauMutationRate = Number(configForm.plateauMutationRate) || 0;
     this.seriesPerMutation = Number(configForm.seriesPerMutation) || 0;
     this.lifeExpectancy = Number(configForm.lifeExpectancy) || 0;
     this.activateLifeExpectancy = Boolean(configForm.activateLifeExpectancy);
     this.processingOption = configForm.processingOption || 'rotation';
+    this.enablePartialRestart = Boolean(configForm.enablePartialRestart);
+    this.plateauGenerations = Number(configForm.plateauGenerations) || 0;
+    this.restartEliteCount = Number(configForm.restartEliteCount) || 0;
+    this.restartPopulationRate = Number(configForm.restartPopulationRate) || 0;
+    this.modelBestFitness = Number(configForm.modelBestFitness) || 0;
+    this.modelAvgFitness = Number(configForm.modelAvgFitness) || 0;
+    this.top10AvgScore = Number(configForm.top10AvgScore) || 0;
+    this.medianScore = Number(configForm.medianScore) || 0;
   }
 
   getId(): number | null {
@@ -141,6 +171,22 @@ class Score {
     this.mutationRate = Number(mutationRate) || 0;
   }
 
+  getEnableAdaptiveMutationOnPlateau(): boolean {
+    return this.enableAdaptiveMutationOnPlateau;
+  }
+
+  setEnableAdaptiveMutationOnPlateau(enableAdaptiveMutationOnPlateau: boolean): void {
+    this.enableAdaptiveMutationOnPlateau = Boolean(enableAdaptiveMutationOnPlateau);
+  }
+
+  getPlateauMutationRate(): number {
+    return this.plateauMutationRate;
+  }
+
+  setPlateauMutationRate(plateauMutationRate: number): void {
+    this.plateauMutationRate = Number(plateauMutationRate) || 0;
+  }
+
   getSeriesPerMutation(): number {
     return this.seriesPerMutation;
   }
@@ -173,6 +219,70 @@ class Score {
     this.processingOption = processingOption || 'rotation';
   }
 
+  getEnablePartialRestart(): boolean {
+    return this.enablePartialRestart;
+  }
+
+  setEnablePartialRestart(enablePartialRestart: boolean): void {
+    this.enablePartialRestart = Boolean(enablePartialRestart);
+  }
+
+  getPlateauGenerations(): number {
+    return this.plateauGenerations;
+  }
+
+  setPlateauGenerations(plateauGenerations: number): void {
+    this.plateauGenerations = Number(plateauGenerations) || 0;
+  }
+
+  getRestartEliteCount(): number {
+    return this.restartEliteCount;
+  }
+
+  setRestartEliteCount(restartEliteCount: number): void {
+    this.restartEliteCount = Number(restartEliteCount) || 0;
+  }
+
+  getRestartPopulationRate(): number {
+    return this.restartPopulationRate;
+  }
+
+  setRestartPopulationRate(restartPopulationRate: number): void {
+    this.restartPopulationRate = Number(restartPopulationRate) || 0;
+  }
+
+  getModelBestFitness(): number {
+    return this.modelBestFitness;
+  }
+
+  setModelBestFitness(modelBestFitness: number): void {
+    this.modelBestFitness = Number(modelBestFitness) || 0;
+  }
+
+  getModelAvgFitness(): number {
+    return this.modelAvgFitness;
+  }
+
+  setModelAvgFitness(modelAvgFitness: number): void {
+    this.modelAvgFitness = Number(modelAvgFitness) || 0;
+  }
+
+  getTop10AvgScore(): number {
+    return this.top10AvgScore;
+  }
+
+  setTop10AvgScore(top10AvgScore: number): void {
+    this.top10AvgScore = Number(top10AvgScore) || 0;
+  }
+
+  getMedianScore(): number {
+    return this.medianScore;
+  }
+
+  setMedianScore(medianScore: number): void {
+    this.medianScore = Number(medianScore) || 0;
+  }
+
   toJSON() {
     return {
       id: this.id,
@@ -186,10 +296,20 @@ class Score {
       selectionRate: this.selectionRate,
       crossoverRate: this.crossoverRate,
       mutationRate: this.mutationRate,
+      enableAdaptiveMutationOnPlateau: this.enableAdaptiveMutationOnPlateau,
+      plateauMutationRate: this.plateauMutationRate,
       seriesPerMutation: this.seriesPerMutation,
       lifeExpectancy: this.lifeExpectancy,
       activateLifeExpectancy: this.activateLifeExpectancy,
       processingOption: this.processingOption,
+      enablePartialRestart: this.enablePartialRestart,
+      plateauGenerations: this.plateauGenerations,
+      restartEliteCount: this.restartEliteCount,
+      restartPopulationRate: this.restartPopulationRate,
+      modelBestFitness: this.modelBestFitness,
+      modelAvgFitness: this.modelAvgFitness,
+      top10AvgScore: this.top10AvgScore,
+      medianScore: this.medianScore,
     };
   }
 }
